@@ -1,6 +1,6 @@
-# Foundry Template
+# MIP-21 RWA Registry
 
-Template for Smart Contract applications compatible with [foundry](https://github.com/foundry-rs/foundry).
+On-chain registry for MIP-21 contracts for RWA.
 
 ## Usage
 

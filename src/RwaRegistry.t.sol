@@ -20,5 +20,35 @@ import "forge-std/Test.sol";
 import {RwaRegistry} from "./RwaRegistry.sol";
 
 contract RwaRegistryTest is Test {
-  function setUp() public {}
+  RwaRegistry internal reg;
+
+  function setUp() public {
+    reg = new RwaRegistry();
+  }
+
+  /*//////////////////////////////////
+     Supported Components Management
+  //////////////////////////////////*/
+
+  function testShouldAddDefaultSupportedComponentsDuringDeployment() public {
+    assertEq(reg.isSupportedComponent("token"), 1);
+    assertEq(reg.isSupportedComponent("urn"), 1);
+    assertEq(reg.isSupportedComponent("liquidationOracle"), 1);
+    assertEq(reg.isSupportedComponent("outputConduit"), 1);
+    assertEq(reg.isSupportedComponent("inputConduit"), 1);
+    assertEq(reg.isSupportedComponent("jar"), 1);
+  }
+
+  function testAddSupportedComponent() public {
+    reg.addSupportedComponent("somethingElse");
+
+    assertEq(reg.isSupportedComponent("somethingElse"), 1);
+  }
+
+  function testRevertUnautorizedAddressAddsSupportedComponent() public {
+    vm.expectRevert(RwaRegistry.Unauthorized.selector);
+
+    vm.prank(address(0x1337));
+    reg.addSupportedComponent("anything");
+  }
 }

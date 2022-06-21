@@ -22,14 +22,42 @@ pragma solidity ^0.8.14;
  * @notice Registry for different MIP-21 deals onboarded into MCD.
  */
 contract RwaRegistry {
-  /// @notice Addresses with admin access on this contract. `wards[usr]`
+  // MIP-21 Architeture Components. `name` is not needed because it is the mapping key.
+  struct Component {
+    bool exists; // Whether the component exists or not.
+    address addr; // Address of the component.
+    uint88 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
+  }
+
+  // MIP-21 Architeture Components type for function parameters and return.
+  struct ComponentIO {
+    bytes32 name; // Name of the component (i.e.: urn, token, outputConduit...).
+    address addr; // Address of the component.
+    uint88 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
+  }
+
+  // Information about a RWA Deal
+  struct Item {
+    bool exists; // Whether the item exists or not.
+    uint248 pos; // Index in ilks array.
+    bytes32[] components; // List of components for the item.
+    mapping(bytes32 => Component) nameToComponent;
+  }
+
+  /// @notice Addresses with admin access on this contract. `wards[usr]`.
   mapping(address => uint256) public wards;
 
-  /// @notice Maps a RWA ilk to the related info. `ilksToInfo[ilk]`
-  mapping(bytes32 => Info) public ilkToInfo;
+  /// @notice Append-only list of all supported component names.
+  bytes32[] public supportedComponents;
+
+  /// @notice Whether a component name is supported or not. `isSupportedComponent[name]`.
+  mapping(bytes32 => uint256) public isSupportedComponent;
 
   /// @notice List of all RWA ilks in this registry.
-  bytes32[] internal ilks;
+  bytes32[] public ilks;
+
+  /// @notice Maps a RWA ilk to the related item. `ilkToItem[ilk]`
+  mapping(bytes32 => Item) public ilkToItem;
 
   /**
    * @notice `usr` was granted admin access.
@@ -42,50 +70,67 @@ contract RwaRegistry {
    */
   event Deny(address indexed usr);
 
-  /// @notice Revert reason when `msg.sender` does not have the required admin access.
-  error NotAuthorized();
+  /**
+   * @notice Revert reason when `msg.sender` does not have the required admin access.
+   */
+  error Unauthorized();
 
   /**
-   * @notice Revert reason when trying to add info for an ilk which already exists.
+   * @notice Revert reason when trying to add an ilk which already exists.
    * @param ilk The ilk being added.
    */
   error IlkAlreadyExists(bytes32 ilk);
 
   /**
-   * @notice Revert reason when adding an OutputConduit different than the one returned by the Urn
-   * @param urn The urn address.
+   * @notice Revert reason when trying to `file` an item for an ilk which does not exist.
+   * @param ilk The ilk being added.
    */
-  error UrnOutputConduitMismatch(address urn);
+  error IlkDoesNotExist(bytes32 ilk);
+
+  /**
+   * @notice Revert reason when trying to add an unsupported component.
+   * @param name The unsupported component name.
+   */
+  error UnsupportedComponent(bytes32 name);
+
+  /**
+   * @notice Revert reason when trying to add an ilk without any components.
+   */
+  error EmptyComponentList();
 
   /**
    * @notice Only addresses with admin access can call methods with this modifier.
    */
   modifier auth() {
     if (wards[msg.sender] != 1) {
-      revert NotAuthorized();
+      revert Unauthorized();
     }
     _;
   }
 
-  // MIP-21 Architeture Components
-  struct Component {
-    address addr; // address of the component of the deal.
-    uint96 variant; // variant of the component implementation (1, 2, ...). Any reserved values should be documented.
-  }
-
-  // Information about a RWA Deal
-  struct Info {
-    uint256 pos; // index in ilks array
-    Component token; // address and variant of the RwaToken for the deal. [required]
-    Component urn; // address and variant of the RwaUrn for the deal. [required]
-    Component liquidationOracle; // address and variant of the RwaLiquidationOracle for the deal. [required]
-    Component outputConduit; // address and variant of the RwaOutputConduit for the deal; variant should be `type(uint96).max` when it should be treated as an opaque address [required]
-    Component inputConduit; // address and variant of the RwaInput for the deal. [optional]
-    Component jar; // address and variant of the RwaJar for the deal. [optional]
-  }
-
-  /// @notice The deployer of the contract gains admin access to it.
+  /**
+   * @notice The deployer of the contract gains admin access to it.
+   * @dev Adds the default supported component names to the registry.
+   */
   constructor() {
+    isSupportedComponent["token"] = 1;
+    supportedComponents.push("token");
+
+    isSupportedComponent["urn"] = 1;
+    supportedComponents.push("urn");
+
+    isSupportedComponent["liquidationOracle"] = 1;
+    supportedComponents.push("liquidationOracle");
+
+    isSupportedComponent["outputConduit"] = 1;
+    supportedComponents.push("outputConduit");
+
+    isSupportedComponent["inputConduit"] = 1;
+    supportedComponents.push("inputConduit");
+
+    isSupportedComponent["jar"] = 1;
+    supportedComponents.push("jar");
+
     wards[msg.sender] = 1;
     emit Rely(msg.sender);
   }
@@ -112,49 +157,199 @@ contract RwaRegistry {
     emit Deny(usr);
   }
 
+  /*//////////////////////////////////
+     Supported Components Management
+  //////////////////////////////////*/
+
+  /**
+   * @notice Adds a supported component name to the registry.
+   * @dev Adds a new type of MIP-21 component that should be supported.
+   * @param componentName_ The "pascalCased" name of the component.
+   */
+  function addSupportedComponent(bytes32 componentName_) external auth {
+    if (isSupportedComponent[componentName_] == 0) {
+      isSupportedComponent[componentName_] = 1;
+      supportedComponents.push(componentName_);
+    }
+  }
+
+  /**
+   * @notice Lists the names of all types of components supported by the registry.
+   * @return The list of component names.
+   */
+  function listSupportedComponents() external view returns (bytes32[] memory) {
+    return supportedComponents;
+  }
+
+  /*//////////////////////////////////
+          Components Management
+  //////////////////////////////////*/
+
   /**
    * @notice Adds the components of MIP-21 associated to an `ilk_`
    * @param ilk_ The ilk name.
-   * @param token_ address and variant of the RwaToken for the deal. [required]
-   * @param urn_ address and variant of the RwaUrn for the deal. [required]
-   * @param liquidationOracle_ address and variant of the RwaLiquidationOracle for the deal. [required]
-   * @param outputConduit_ address and variant of the RwaOutputConduit for the deal;
-   *        variant should be `type(uint96).max` when it should be treated as an opaque address [required]
-   * @param _inputConduit address and variant of the RwaInput for the deal [optional];
-   *        Provide [address(0), 0] if the component was not deployed.
-   * @param _jar address and variant of the RwaJar for the deal [optional];
-   *        Provide [address(0), 0] if the component was not deployed.
+   * @param componentIOs_ The list of components associated with `ilk_`.
    */
-  function add(
-    bytes32 ilk_,
-    Component calldata token_,
-    Component calldata urn_,
-    Component calldata liquidationOracle_,
-    Component calldata outputConduit_,
-    Component calldata inputConduit_,
-    Component calldata jar_
-  ) external auth {
-    if (ilkToInfo[ilk_].token.addr != address(0)) {
+  function add(bytes32 ilk_, ComponentIO[] calldata componentIOs_) external auth {
+    if (componentIOs_.length == 0) {
+      revert EmptyComponentList();
+    }
+
+    Item storage item = ilkToItem[ilk_];
+
+    if (item.exists) {
       revert IlkAlreadyExists(ilk_);
     }
 
-    if (RwaUrnLike(urn_.addr).outputConduit() != outputConduit_.addr) {
-      revert UrnOutputConduitMismatch(urn_.addr);
+    ilks.push(ilk_);
+
+    item.exists = true;
+    item.pos = uint248(ilks.length - 1);
+
+    for (uint256 i = 0; i < componentIOs_.length; i++) {
+      ComponentIO calldata componentIO = componentIOs_[i];
+
+      if (isSupportedComponent[componentIO.name] == 0) {
+        revert UnsupportedComponent(componentIO.name);
+      }
+
+      item.components.push(componentIO.name);
+
+      Component storage component = item.nameToComponent[componentIO.name];
+
+      component.exists = true;
+      component.addr = componentIO.addr;
+      component.variant = componentIO.variant;
+    }
+  }
+
+  /**
+   * @notice Updates the components of an existing `ilk_`.
+   * @dev Uses only primitive types as input.
+   * @param ilk_ The ilk name.
+   * @param componentName_ The name of the component. Must be one of the supported ones.
+   * @param componentAddr_ The address of the component.
+   * @param componentVariant_ The variant of the component.
+   */
+  function file(
+    bytes32 ilk_,
+    bytes32 componentName_,
+    address componentAddr_,
+    uint256 componentVariant_
+  ) external auth {
+    Item storage item = ilkToItem[ilk_];
+
+    if (!item.exists) {
+      revert IlkDoesNotExist(ilk_);
     }
 
-    ilks.push(ilk_);
-    Info storage info = ilkToInfo[ilk_];
+    Component storage component = item.nameToComponent[componentName_];
 
-    info.pos = ilks.length - 1;
-    info.token = token_;
-    info.urn = urn_;
-    info.liquidationOracle = liquidationOracle_;
-    info.outputConduit = outputConduit_;
-    info.inputConduit = inputConduit_;
-    info.jar = jar_;
+    if (!component.exists) {
+      item.components.push(componentName_);
+      component.exists = true;
+    }
+
+    component.addr = componentAddr_;
+    component.variant = uint88(componentVariant_);
   }
-}
 
-interface RwaUrnLike {
-  function outputConduit() external view returns (address);
+  /**
+   * @notice Updates the components of an existing `ilk_`.
+   * @param ilk_ The ilk name.
+   * @param componentIO_ The component parameters.
+   */
+  function file(bytes32 ilk_, ComponentIO calldata componentIO_) external auth {
+    Item storage item = ilkToItem[ilk_];
+
+    if (!item.exists) {
+      revert IlkDoesNotExist(ilk_);
+    }
+
+    Component storage component = item.nameToComponent[componentIO_.name];
+
+    if (!component.exists) {
+      item.components.push(componentIO_.name);
+      component.exists = true;
+    }
+
+    component.addr = componentIO_.addr;
+    component.variant = componentIO_.variant;
+  }
+
+  /**
+   * @notice Lists all ilks present in the registry.
+   * @return The list of ilks.
+   */
+  function list() external view returns (bytes32[] memory) {
+    return ilks;
+  }
+
+  /**
+   * @notice Returns the amount of ilks present in the registry.
+   * @return The amount of ilks.
+   */
+  function count() external view returns (uint256) {
+    return ilks.length;
+  }
+
+  /**
+   * @notice Returns the list of components associated to `ilk_`.
+   * @dev Returns a tuple of primitive types arrays for consumers incompatible with abicoderv2.
+   * @return names The list of component names.
+   * @return addrs The list of component addresses.
+   * @return variants The list of component variants.
+   */
+  function listComponentsTupleOf(bytes32 ilk_)
+    external
+    view
+    returns (
+      bytes32[] memory names,
+      address[] memory addrs,
+      uint256[] memory variants
+    )
+  {
+    Item storage item = ilkToItem[ilk_];
+
+    if (!item.exists) {
+      revert IlkDoesNotExist(ilk_);
+    }
+
+    bytes32[] storage components = item.components;
+    names = new bytes32[](components.length);
+    addrs = new address[](components.length);
+    variants = new uint256[](components.length);
+
+    for (uint256 i = 0; i < components.length; i++) {
+      Component storage component = item.nameToComponent[components[i]];
+
+      names[i] = components[i];
+      addrs[i] = component.addr;
+      variants[i] = component.variant;
+    }
+  }
+
+  /**
+   * @notice Returns the list of components associated to `ilk_`.
+   * @param ilk_ The ilk name.
+   * @return The list of components.
+   */
+  function listComponentsOf(bytes32 ilk_) external view returns (ComponentIO[] memory) {
+    Item storage item = ilkToItem[ilk_];
+
+    if (!item.exists) {
+      revert IlkDoesNotExist(ilk_);
+    }
+
+    bytes32[] storage components = item.components;
+    ComponentIO[] memory outputComponents = new ComponentIO[](components.length);
+
+    for (uint256 i = 0; i < components.length; i++) {
+      Component storage component = item.nameToComponent[components[i]];
+
+      outputComponents[i] = ComponentIO({name: components[i], addr: component.addr, variant: component.variant});
+    }
+
+    return outputComponents;
+  }
 }

@@ -153,6 +153,13 @@ contract RwaRegistry {
   error MismatchingComponentParams();
 
   /**
+   * @notice Revert reason when trying to get a component `name` which does not exist for the deal identified by `ilk`
+   * @param ilk The ilk name.
+   * @param name The unsupported component name.
+   */
+  error ComponentDoesNotExist(bytes32 ilk, bytes32 name);
+
+  /**
    * @notice Only addresses with admin access can call methods with this modifier.
    */
   modifier auth() {
@@ -244,52 +251,21 @@ contract RwaRegistry {
   //////////////////////////////////*/
 
   /**
+   * @notice Adds a deal identified by `ilk_` to the registry.
+   * @param ilk_ The ilk name.
+   */
+  function add(bytes32 ilk_) external auth {
+    _addDeal(ilk_);
+  }
+
+  /**
    * @notice Adds a deal identified by `ilk_` with its components to the registry.
    * @param ilk_ The ilk name.
    * @param components_ The list of components associated with `ilk_`.
    */
   function add(bytes32 ilk_, Component[] calldata components_) external auth {
-    Deal storage deal = ilkToDeal[ilk_];
-
-    if (deal.status != DealStatus.NONE) {
-      revert DealAlreadyExists(ilk_);
-    }
-
-    ilks.push(ilk_);
-
-    deal.status = DealStatus.ACTIVE;
-    deal.pos = uint248(ilks.length - 1);
-
+    _addDeal(ilk_);
     _addComponents(ilk_, components_);
-
-    emit AddDeal(ilk_);
-  }
-
-  /**
-   * @notice Adds the MIP-21 components associated to a deal identified by `ilk_`.
-   * @param ilk_ The ilk name.
-   * @param components_ The list of components associated with `ilk_`.
-   */
-  function _addComponents(bytes32 ilk_, Component[] calldata components_) internal {
-    Deal storage deal = ilkToDeal[ilk_];
-
-    for (uint256 i = 0; i < components_.length; i++) {
-      Component calldata component = components_[i];
-
-      if (isSupportedComponent[component.name] == 0) {
-        revert UnsupportedComponent(component.name);
-      }
-
-      deal.components.push(component.name);
-
-      ComponentStorage storage componentStorage = deal.nameToComponent[component.name];
-
-      componentStorage.exists = true;
-      componentStorage.addr = component.addr;
-      componentStorage.variant = component.variant;
-
-      emit File(ilk_, "component", component.name, component.addr, component.variant);
-    }
   }
 
   /**
@@ -305,61 +281,8 @@ contract RwaRegistry {
     address[] calldata addrs_,
     uint256[] calldata variants_
   ) external auth {
-    Deal storage deal = ilkToDeal[ilk_];
-
-    if (deal.status != DealStatus.NONE) {
-      revert DealAlreadyExists(ilk_);
-    }
-
-    ilks.push(ilk_);
-
-    deal.status = DealStatus.ACTIVE;
-    deal.pos = uint248(ilks.length - 1);
-
+    _addDeal(ilk_);
     _addComponents(ilk_, names_, addrs_, variants_);
-
-    emit AddDeal(ilk_);
-  }
-
-  /**
-   * @notice Adds the MIP-21 components associated to a deal identified by `ilk_`.
-   * @dev All array arguments must have the same length and order.
-   * @param ilk_ The ilk name.
-   * @param names_ The list of component names.
-   * @param addrs_ The list of component addresses.
-   * @param variants_ The list of component variants.
-   */
-  function _addComponents(
-    bytes32 ilk_,
-    bytes32[] calldata names_,
-    address[] calldata addrs_,
-    uint256[] calldata variants_
-  ) internal {
-    if (names_.length != addrs_.length || names_.length != variants_.length) {
-      revert MismatchingComponentParams();
-    }
-
-    Deal storage deal = ilkToDeal[ilk_];
-
-    for (uint256 i = 0; i < names_.length; i++) {
-      bytes32 name = names_[i];
-      address addr = addrs_[i];
-      uint256 variant = variants_[i];
-
-      if (isSupportedComponent[name] == 0) {
-        revert UnsupportedComponent(name);
-      }
-
-      deal.components.push(name);
-
-      ComponentStorage storage componentStorage = deal.nameToComponent[name];
-
-      componentStorage.exists = true;
-      componentStorage.addr = addr;
-      componentStorage.variant = variant;
-
-      emit File(ilk_, "component", name, addr, variant);
-    }
   }
 
   /**
@@ -550,7 +473,7 @@ contract RwaRegistry {
     ComponentStorage storage componentStorage = deal.nameToComponent[componentName_];
 
     if (!componentStorage.exists) {
-      revert UnsupportedComponent(componentName_);
+      revert ComponentDoesNotExist(ilk_, componentName_);
     }
 
     return Component({name: componentName_, addr: componentStorage.addr, variant: componentStorage.variant});
@@ -584,11 +507,102 @@ contract RwaRegistry {
     ComponentStorage storage componentStorage = deal.nameToComponent[componentName_];
 
     if (!componentStorage.exists) {
-      revert UnsupportedComponent(componentName_);
+      revert ComponentDoesNotExist(ilk_, componentName_);
     }
 
     name = componentName_;
     addr = componentStorage.addr;
     variant = componentStorage.variant;
+  }
+
+  /*//////////////////////////////////
+            Internal Methods
+  //////////////////////////////////*/
+
+  /**
+   * @notice Adds a deal identified by `ilk_` with its components to the registry.
+   * @param ilk_ The ilk name.
+   */
+  function _addDeal(bytes32 ilk_) internal {
+    Deal storage deal = ilkToDeal[ilk_];
+
+    if (deal.status != DealStatus.NONE) {
+      revert DealAlreadyExists(ilk_);
+    }
+
+    ilks.push(ilk_);
+
+    deal.status = DealStatus.ACTIVE;
+    deal.pos = uint248(ilks.length - 1);
+
+    emit AddDeal(ilk_);
+  }
+
+  /**
+   * @notice Adds the MIP-21 components associated to a deal identified by `ilk_`.
+   * @param ilk_ The ilk name.
+   * @param components_ The list of components associated with `ilk_`.
+   */
+  function _addComponents(bytes32 ilk_, Component[] calldata components_) internal {
+    Deal storage deal = ilkToDeal[ilk_];
+
+    for (uint256 i = 0; i < components_.length; i++) {
+      Component calldata component = components_[i];
+
+      if (isSupportedComponent[component.name] == 0) {
+        revert UnsupportedComponent(component.name);
+      }
+
+      deal.components.push(component.name);
+
+      ComponentStorage storage componentStorage = deal.nameToComponent[component.name];
+
+      componentStorage.exists = true;
+      componentStorage.addr = component.addr;
+      componentStorage.variant = component.variant;
+
+      emit File(ilk_, "component", component.name, component.addr, component.variant);
+    }
+  }
+
+  /**
+   * @notice Adds the MIP-21 components associated to a deal identified by `ilk_`.
+   * @dev All array arguments must have the same length and order.
+   * @param ilk_ The ilk name.
+   * @param names_ The list of component names.
+   * @param addrs_ The list of component addresses.
+   * @param variants_ The list of component variants.
+   */
+  function _addComponents(
+    bytes32 ilk_,
+    bytes32[] calldata names_,
+    address[] calldata addrs_,
+    uint256[] calldata variants_
+  ) internal {
+    if (names_.length != addrs_.length || names_.length != variants_.length) {
+      revert MismatchingComponentParams();
+    }
+
+    Deal storage deal = ilkToDeal[ilk_];
+
+    for (uint256 i = 0; i < names_.length; i++) {
+      bytes32 name = names_[i];
+      address addr = addrs_[i];
+      uint256 variant = variants_[i];
+
+      if (isSupportedComponent[name] == 0) {
+        revert UnsupportedComponent(name);
+      }
+
+      deal.components.push(name);
+
+      ComponentStorage storage componentStorage = deal.nameToComponent[name];
+
+      componentStorage.exists = true;
+      componentStorage.addr = addr;
+      componentStorage.variant = variant;
+
+      emit File(ilk_, "component", name, addr, variant);
+    }
   }
 }

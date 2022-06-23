@@ -40,14 +40,14 @@ contract RwaRegistry {
   struct ComponentStorage {
     bool exists; // Whether the component exists or not.
     address addr; // Address of the component.
-    uint88 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
+    uint256 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
   }
 
   // MIP-21 Architeture Components type for function parameters and returns.
   struct Component {
     bytes32 name; // Name of the component (i.e.: urn, token, outputConduit...).
     address addr; // Address of the component.
-    uint88 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
+    uint256 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
   }
 
   /// @notice Addresses with admin access on this contract. `wards[usr]`.
@@ -356,7 +356,7 @@ contract RwaRegistry {
 
       componentStorage.exists = true;
       componentStorage.addr = addr;
-      componentStorage.variant = uint88(variant);
+      componentStorage.variant = variant;
 
       emit File(ilk_, "component", name, addr, variant);
     }
@@ -447,7 +447,7 @@ contract RwaRegistry {
     }
 
     componentStorage.addr = componentAddr_;
-    componentStorage.variant = uint88(componentVariant_);
+    componentStorage.variant = componentVariant_;
 
     emit File(ilk_, what_, componentName_, componentAddr_, componentVariant_);
   }
@@ -470,7 +470,36 @@ contract RwaRegistry {
 
   /**
    * @notice Returns the list of components associated to `ilk_`.
+   * @param ilk_ The ilk name.
+   * @return The list of components.
+   */
+  function listComponentsOf(bytes32 ilk_) external view returns (Component[] memory) {
+    Deal storage deal = ilkToDeal[ilk_];
+
+    if (deal.status == DealStatus.NONE) {
+      revert DealDoesNotExist(ilk_);
+    }
+
+    bytes32[] storage components = deal.components;
+    Component[] memory outputComponents = new Component[](components.length);
+
+    for (uint256 i = 0; i < components.length; i++) {
+      ComponentStorage storage componentStorage = deal.nameToComponent[components[i]];
+
+      outputComponents[i] = Component({
+        name: components[i],
+        addr: componentStorage.addr,
+        variant: componentStorage.variant
+      });
+    }
+
+    return outputComponents;
+  }
+
+  /**
+   * @notice Returns the list of components associated to `ilk_`.
    * @dev Returns a tuple of primitive types arrays for consumers incompatible with abicoderv2.
+   * @param ilk_ The ilk name.
    * @return names The list of component names.
    * @return addrs The list of component addresses.
    * @return variants The list of component variants.
@@ -505,30 +534,61 @@ contract RwaRegistry {
   }
 
   /**
-   * @notice Returns the list of components associated to `ilk_`.
+   * @notice Gets a specific component from a deal identified by `ilk`.
+   * @dev It will revert if the deal or the component does not exist.
    * @param ilk_ The ilk name.
-   * @return The list of components.
+   * @param componentName_ The name of the component.
+   * @return The deal component.
    */
-  function listComponentsOf(bytes32 ilk_) external view returns (Component[] memory) {
+  function getComponent(bytes32 ilk_, bytes32 componentName_) external view returns (Component memory) {
     Deal storage deal = ilkToDeal[ilk_];
 
     if (deal.status == DealStatus.NONE) {
       revert DealDoesNotExist(ilk_);
     }
 
-    bytes32[] storage components = deal.components;
-    Component[] memory outputComponents = new Component[](components.length);
+    ComponentStorage storage componentStorage = deal.nameToComponent[componentName_];
 
-    for (uint256 i = 0; i < components.length; i++) {
-      ComponentStorage storage componentStorage = deal.nameToComponent[components[i]];
-
-      outputComponents[i] = Component({
-        name: components[i],
-        addr: componentStorage.addr,
-        variant: componentStorage.variant
-      });
+    if (!componentStorage.exists) {
+      revert UnsupportedComponent(componentName_);
     }
 
-    return outputComponents;
+    return Component({name: componentName_, addr: componentStorage.addr, variant: componentStorage.variant});
+  }
+
+  /**
+   * @notice Gets a specific component from a deal identified by `ilk`.
+   * @dev It will revert if the deal or the component does not exist.
+   * @dev Returns a tuple of primitive types arrays for consumers incompatible with abicoderv2.
+   * @param ilk_ The ilk name.
+   * @param componentName_ The name of the component.
+   * @return name The component name.
+   * @return addr The component address.
+   * @return variant The component variant.
+   */
+  function getComponentTuple(bytes32 ilk_, bytes32 componentName_)
+    external
+    view
+    returns (
+      bytes32 name,
+      address addr,
+      uint256 variant
+    )
+  {
+    Deal storage deal = ilkToDeal[ilk_];
+
+    if (deal.status == DealStatus.NONE) {
+      revert DealDoesNotExist(ilk_);
+    }
+
+    ComponentStorage storage componentStorage = deal.nameToComponent[componentName_];
+
+    if (!componentStorage.exists) {
+      revert UnsupportedComponent(componentName_);
+    }
+
+    name = componentName_;
+    addr = componentStorage.addr;
+    variant = componentStorage.variant;
   }
 }

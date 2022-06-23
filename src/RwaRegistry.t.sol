@@ -62,7 +62,7 @@ contract RwaRegistryTest is Test {
     assertEq(reg.isSupportedComponent("somethingElse"), 1);
   }
 
-  function testFuzzRevertAddExistingSupportedComponent() public {
+  function testRevertAddExistingSupportedComponent() public {
     // bytes32 componentName_
 
     bytes32 componentName_ = "anything";
@@ -72,7 +72,7 @@ contract RwaRegistryTest is Test {
     reg.addSupportedComponent(componentName_);
   }
 
-  function testFuzzRevertUnautorizedAddSupportedComponent() public {
+  function testRevertUnautorizedAddSupportedComponent() public {
     // address sender_
     // if (sender_ == address(this)) {
     //   return;
@@ -89,7 +89,7 @@ contract RwaRegistryTest is Test {
      Deals & Components Management
   //////////////////////////////////*/
 
-  function testFuzzAddDealAndComponents() public {
+  function testAddDealAndComponents() public {
     // bytes32 ilk_,
     // address token_,
     // address urn_,
@@ -166,7 +166,7 @@ contract RwaRegistryTest is Test {
     reg.add(ilk_, components);
   }
 
-  function testFuzzAddDealAndComponentsAsTuple() public {
+  function testAddDealAndComponentsAsTuple() public {
     // bytes32 ilk_,
     // address token_,
     // address urn_
@@ -272,7 +272,7 @@ contract RwaRegistryTest is Test {
     reg.listComponentsTupleOf(ilk_);
   }
 
-  function testFuzzAddDealWithEmptyComponentList() public {
+  function testAddDealWithEmptyComponentList() public {
     // bytes32 ilk_
 
     bytes32 ilk_ = "RWA1337-A";
@@ -287,7 +287,7 @@ contract RwaRegistryTest is Test {
     assertTrue(actualComponents.length == 0);
   }
 
-  function testFuzzAddDealWithNoComponents() public {
+  function testAddDealWithNoComponents() public {
     // bytes32 ilk_
 
     bytes32 ilk_ = "RWA1337-A";
@@ -311,7 +311,7 @@ contract RwaRegistryTest is Test {
     reg.add(ilk_);
   }
 
-  function testFuzzRevertUnautorizedAddDeal() public {
+  function testRevertUnautorizedAddDeal() public {
     // address sender_,
     // bytes32 ilk_,
     // address token_
@@ -333,7 +333,7 @@ contract RwaRegistryTest is Test {
     reg.add(ilk_, components);
   }
 
-  function testFuzzListAllDealIlks() public {
+  function testListAllDealIlks() public {
     // bytes32 ilk1_, bytes32 ilk2_
     // if (ilk1_ == ilk2_) {
     //   return;
@@ -355,7 +355,7 @@ contract RwaRegistryTest is Test {
     assertEq(actualIlks[1], expectedIlks[1]);
   }
 
-  function testFuzziCountAllDealIlks() public {
+  function testiCountAllDealIlks() public {
     // bytes32[] memory ilks_
     // if (ilks_.length == 0) {
     //   return;
@@ -379,7 +379,7 @@ contract RwaRegistryTest is Test {
     assertEq(count, expected);
   }
 
-  function testFuzzAddNewDealComponent() public {
+  function testAddNewDealComponent() public {
     // bytes32 ilk_,
     // address token_,
     // address urn_,
@@ -403,7 +403,7 @@ contract RwaRegistryTest is Test {
     assertEq(actualComponent.variant, newComponent.variant, "Component variant mismatch");
   }
 
-  function testFuzzAddNewDealComponentAsTuple() public {
+  function testAddNewDealComponentAsTuple() public {
     // bytes32 ilk_,
     // address token_,
     // address urn_,
@@ -426,7 +426,7 @@ contract RwaRegistryTest is Test {
     assertEq(actualVariant, variant_, "Component variant mismatch");
   }
 
-  function testFuzzUpdateDealComponent() public {
+  function testUpdateDealComponent() public {
     // bytes32 ilk_,
     // address token_,
     // uint256 variant_
@@ -493,7 +493,7 @@ contract RwaRegistryTest is Test {
     reg.getComponent(ilk_, "urn");
   }
 
-  function testFuzzUpdateDealComponentAsTuple() public {
+  function testUpdateDealComponentAsTuple() public {
     // bytes32 ilk_,
     // address token_,
     // uint256 variant_
@@ -589,7 +589,7 @@ contract RwaRegistryTest is Test {
     reg.getComponentTuple(ilk_, "urn");
   }
 
-  function testFuzzRevertUnautorizedUpdateDeal() public {
+  function testRevertUnautorizedUpdateDeal() public {
     // address sender_,
     // bytes32 ilk_,
     // address token_
@@ -612,7 +612,7 @@ contract RwaRegistryTest is Test {
     reg.file(ilk_, "component", RwaRegistry.Component({name: "token", addr: address(0x1337), variant: 1337}));
   }
 
-  function testFuzzFinalizeComponent() public {
+  function testFinalizeComponent() public {
     // bytes32 ilk_
 
     bytes32 ilk_ = "RWA1337-A";
@@ -644,7 +644,7 @@ contract RwaRegistryTest is Test {
     reg.finalize(wrongIlk);
   }
 
-  function testFuzzRevertUpdateFinalizedComponent() public {
+  function testRevertUpdateFinalizedComponent() public {
     // bytes32 ilk_
 
     bytes32 ilk_ = "RWA1337-A";
@@ -659,7 +659,7 @@ contract RwaRegistryTest is Test {
     reg.file(ilk_, "component", RwaRegistry.Component({name: "token", addr: address(0x2448), variant: 2}));
   }
 
-  function testFuzzRevertUpdateFinalizedComponentAsTuple() public {
+  function testRevertUpdateFinalizedComponentAsTuple() public {
     // bytes32 ilk_
 
     bytes32 ilk_ = "RWA1337-A";

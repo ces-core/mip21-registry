@@ -22,6 +22,11 @@ pragma solidity ^0.8.14;
  * @notice Registry for different MIP-21 deals onboarded into MCD.
  */
 contract RwaRegistry {
+  /**
+   * ┌──────┐     add()    ┌────────┐  finalize()  ┌───────────┐
+   * │ NONE ├──────────────► ACTIVE ├──────────────► FINALIZED │
+   * └──────┘              └────────┘              └───────────┘
+   */
   enum DealStatus {
     NONE, // The deal does not exist.
     ACTIVE, // The deal is active.

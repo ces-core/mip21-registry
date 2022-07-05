@@ -39,12 +39,11 @@ Deal components consist of:
 
 - `name: bytes32`: the `camelCased` name of the component. It has to be one of the supported components.
 - `addr: address`: the address of the component, be it a smart contract or an EOA.
-- `variant: uint256`: we have identified
-  early on that components fulfilling the same role may have different implementations. Following the same approach of
-  the [`GemJoin` adapters](https://github.com/makerdao/dss-gem-joins/), each implementation has a numeric suffix
-  identifying it. This allows consumers to know precisely with which implementation they are dealing with when
-  querying the registry. Different components can have different reserved values for variants with special meaning and
-  should be documented below.
+- `variant: uint88`: we have identified early on that components fulfilling the same role may have different
+  implementations. Following the same approach of the [`GemJoin` adapters](https://github.com/makerdao/dss-gem-joins/),
+  each implementation has a numeric suffix identifying it. This allows consumers to know precisely with which
+  implementation they are dealing with when querying the registry. Different components can have different reserved
+  values for variants with special meaning and should be documented below.
 
 ## List of currently supported components
 
@@ -91,11 +90,11 @@ The RWA output conduit, acts as a temporary holder for Dai when it is generated 
 
 **Variants:**
 
-|     #      | Description                                                                                                                                     |
-| :--------: | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-|    `1`     | The base implementation the output conduit. See [`RwaOutputConduit.sol`][rwa-output-conduit]                                                    |
-|    `2`     | Based on `#1`, with a permissioned `push()` method. See [`RwaOutputConduit2.sol`][rwa-output-conduit2]                                          |
-| `uint(-1)` | Not a real conduit. Should be used when Dai is drawn directly into the destination and be treated as an opaque `address`, not a smart contract. |
+|         #          | Description                                                                                                                                     |
+| :----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+|        `1`         | The base implementation the output conduit. See [`RwaOutputConduit.sol`][rwa-output-conduit]                                                    |
+|        `2`         | Based on `#1`, with a permissioned `push()` method. See [`RwaOutputConduit2.sol`][rwa-output-conduit2]                                          |
+| `type(uint88).max` | Not a real conduit. Should be used when Dai is drawn directly into the destination and be treated as an opaque `address`, not a smart contract. |
 
 [rwa-output-conduit]: https://github.com/clio-finance/mip21-toolkit/blob/master/src/conduits/RwaOutputConduit.sol
 [rwa-output-conduit2]: https://github.com/clio-finance/mip21-toolkit/blob/master/src/conduits/RwaOutputConduit2.sol

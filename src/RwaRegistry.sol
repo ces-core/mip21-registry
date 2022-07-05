@@ -289,7 +289,6 @@ contract RwaRegistry {
 
   /**
    * @notice Updates the components of an existing `ilk_`.
-   * @dev Uses only primitive types as input.
    * @param ilk_ The ilk name.
    * @param what_ What is being changed. One of ["component"].
    * @param componentName_ The name of the component. Must be one of the supported ones.
@@ -344,7 +343,6 @@ contract RwaRegistry {
 
   /**
    * @notice Returns the list of components associated to `ilk_`.
-   * @dev Returns a tuple of primitive types arrays for consumers incompatible with abicoderv2.
    * @param ilk_ The ilk name.
    * @return names The list of component names.
    * @return addrs The list of component addresses.
@@ -382,7 +380,6 @@ contract RwaRegistry {
   /**
    * @notice Gets a specific component from a deal identified by `ilk`.
    * @dev It will revert if the deal or the component does not exist.
-   * @dev Returns a tuple of primitive types arrays for consumers incompatible with abicoderv2.
    * @param ilk_ The ilk name.
    * @param componentName_ The name of the component.
    * @return addr The component address.

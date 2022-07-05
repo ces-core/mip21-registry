@@ -15,8 +15,8 @@ test:; forge test ${args} # --ffi # enable if you need the `ffi` cheat code on H
 
 flatten:; forge flatten --source-file src/DappTemplate.sol
 
-deploy:; @scripts/forge-deploy.sh src/DappTemplate.sol:DappTemplate --verify
-verify:; @scripts/forge-verify.sh ${address} src/DappTemplate.sol:DappTemplate
+deploy:; @scripts/forge-deploy.sh src/RwaRegistry.sol:RwaRegistry --verify
+verify:; @scripts/forge-verify.sh ${address} src/RwaRegistry.sol:RwaRegistry
 send:; @scripts/cast-send.sh ${args}
 
 nodejs-deps:; yarn install

@@ -334,6 +334,21 @@ contract RwaRegistry {
   /**
    * @notice Returns the list of components associated to `ilk_`.
    * @param ilk_ The ilk name.
+   * @return The list of component names.
+   */
+  function listComponentNamesOf(bytes32 ilk_) external view returns (bytes32[] memory) {
+    Deal storage deal = ilkToDeal[ilk_];
+
+    if (deal.status == DealStatus.NONE) {
+      revert DealDoesNotExist(ilk_);
+    }
+
+    return deal.components;
+  }
+
+  /**
+   * @notice Returns the list of components associated to `ilk_`.
+   * @param ilk_ The ilk name.
    * @return names The list of component names.
    * @return addrs The list of component addresses.
    * @return variants The list of component variants.
@@ -429,7 +444,7 @@ contract RwaRegistry {
     address[] calldata addrs_,
     uint88[] calldata variants_
   ) internal {
-    if (names_.length != addrs_.length || names_.length != variants_.length) {
+    if (!(names_.length == addrs_.length && names_.length == variants_.length)) {
       revert MismatchingComponentParams();
     }
 

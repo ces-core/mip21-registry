@@ -231,6 +231,41 @@ contract RwaRegistryTest is Test {
     assertEq(actualVariants.length, 0, "Variant list is not empty");
   }
 
+  function testListAllDealComponentNames() public {
+    // bytes32 ilk_,
+    // addrres urn_,
+    // addrres liquidationOracle_
+
+    bytes32 ilk_ = "RWA1337-A";
+    address urn_ = address(0x1337);
+    address liquidationOracle_ = address(0x2448);
+
+    bytes32[] memory originalNames = new bytes32[](2);
+    address[] memory originalAddrs = new address[](2);
+    uint88[] memory originalVariants = new uint88[](2);
+    originalNames[0] = "urn";
+    originalAddrs[0] = urn_;
+    originalVariants[0] = 1;
+    originalNames[1] = "liquidationOracle";
+    originalAddrs[1] = liquidationOracle_;
+    originalVariants[1] = 1;
+    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+    bytes32[] memory actualNames = reg.listComponentNamesOf(ilk_);
+
+    assertEq(actualNames[0], originalNames[0]);
+    assertEq(actualNames[1], originalNames[1]);
+  }
+
+  function testRevertListComponentNamesOfUnexistingDeal() public {
+    // bytes32 ilk_
+
+    bytes32 ilk_ = "RWA1337-A";
+
+    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
+    reg.listComponentNamesOf(ilk_);
+  }
+
   function testAddDealWithNoComponents() public {
     // bytes32 ilk_
 
@@ -276,28 +311,22 @@ contract RwaRegistryTest is Test {
   }
 
   function testListAllDealIlks() public {
-    // bytes32 ilk1_, bytes32 ilk2_
-    // if (ilk1_ == ilk2_) {
-    //   return;
-    // }
+    // bytes32 ilk0_, bytes32 ilk1_
+    // vm.assume(ilk0_ != ilk1_);
 
-    bytes32 ilk1_ = "RWA1337-A";
-    bytes32 ilk2_ = "RWA2448-A";
+    bytes32 ilk0_ = "RWA1337-A";
+    bytes32 ilk1_ = "RWA2448-A";
 
+    reg.add(ilk0_);
     reg.add(ilk1_);
-    reg.add(ilk2_);
 
     bytes32[] memory actualIlks = reg.list();
 
-    bytes32[] memory expectedIlks = new bytes32[](2);
-    expectedIlks[0] = ilk1_;
-    expectedIlks[1] = ilk2_;
-
-    assertEq(actualIlks[0], expectedIlks[0]);
-    assertEq(actualIlks[1], expectedIlks[1]);
+    assertEq(actualIlks[0], ilk0_);
+    assertEq(actualIlks[1], ilk1_);
   }
 
-  function testiCountAllDealIlks() public {
+  function testCountAllDealIlks() public {
     // bytes32[] memory ilks_
     // if (ilks_.length == 0) {
     //   return;

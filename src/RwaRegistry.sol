@@ -17,9 +17,9 @@
 pragma solidity ^0.8.14;
 
 /**
- * @title MIP-21 RWA Registry
+ * @title RWA Registry
  * @author Henrique Barcelos <henrique@clio.finance>
- * @notice Registry for different MIP-21 deals onboarded into MCD.
+ * @notice Registry for different deals onboarded into MCD.
  */
 contract RwaRegistry {
   /**
@@ -41,7 +41,7 @@ contract RwaRegistry {
     mapping(bytes32 => Component) nameToComponent; // Associate a component name to its params. nameToComponent[componentName].
   }
 
-  // MIP-21 Architeture Components. `name` is not needed in storage because it is the mapping key.
+  // Architeture Components. `name` is not needed in storage because it is the mapping key.
   struct Component {
     bool exists; // Whether the component exists or not.
     address addr; // Address of the component.
@@ -219,7 +219,7 @@ contract RwaRegistry {
 
   /**
    * @notice Adds a supported component name to the registry.
-   * @dev Adds a new type of MIP-21 component that should be supported.
+   * @dev Adds a new type of component that should be supported.
    * @param name_ The "pascalCased" name of the component.
    */
   function addSupportedComponent(bytes32 name_) external auth {
@@ -416,7 +416,7 @@ contract RwaRegistry {
   }
 
   /**
-   * @notice Adds the MIP-21 components associated to a deal identified by `ilk_`.
+   * @notice Adds the components associated to a deal identified by `ilk_`.
    * @dev All array arguments must have the same length and order.
    * @param ilk_ The ilk name.
    * @param names_ The list of component names.

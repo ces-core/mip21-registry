@@ -49,6 +49,9 @@ contract RwaRegistry {
   /// @notice Maps a RWA ilk to the related deal. `ilkToDeal[ilk]`
   mapping(bytes32 => Deal) public ilkToDeal;
 
+  /// @notice Maps the position in the RWA ilks list to the actual ilk. `postToIlk[pos]`
+  mapping(uint256 => bytes32) public posToIlk;
+
   /**
    * @notice `usr` was granted admin access.
    * @param usr The user address.
@@ -135,6 +138,11 @@ contract RwaRegistry {
    * @notice Revert reason when trying to add components with mismatching params.
    */
   error MismatchingComponentParams();
+
+  /**
+   * @notice Revert reason when calling iterator methods with bad parameters.
+   */
+  error InvalidIteration();
 
   /**
    * @notice Revert reason when trying to get a component `name` which does not exist for the deal identified by `ilk`
@@ -310,6 +318,34 @@ contract RwaRegistry {
   }
 
   /**
+   * @notice Iterates through ilks present in the registry from `start` (inclusive) to `end` (exclusive).
+   * @dev If `end > items.length`, it will stop the iteration at `items.length`.
+   * @dev Examples:
+   *    - iter(0,10) will return 10 elements, from 0 to 9 if the ilks array have at least 10 elements.
+   *    - iter(0,10) will return 3 elements, from 0 to 2 if the ilks array have only 3 elements.
+   * @param start The 0-based index to start the iteration (inclusive).
+   * @param end The 0-based index to stop the iteration (exclusive).
+   * @return The list of ilks.
+   */
+  function iter(uint256 start, uint256 end) external view returns (bytes32[] memory) {
+    if (start > end) {
+      revert InvalidIteration();
+    }
+
+    end = end > ilks.length ? ilks.length : end;
+
+    // Since `end` is exclusive, if start == end, then it should return an empty array;
+    uint256 size = end - start;
+    bytes32[] memory result = new bytes32[](size);
+
+    for (uint256 i = 0; i < size; i++) {
+      result[i] = ilks[start + i];
+    }
+
+    return result;
+  }
+
+  /**
    * @notice Returns the amount of ilks present in the registry.
    * @return The amount of ilks.
    */
@@ -411,7 +447,10 @@ contract RwaRegistry {
     ilks.push(ilk_);
 
     deal.status = DealStatus.ACTIVE;
-    deal.pos = uint248(ilks.length - 1);
+
+    uint256 pos = ilks.length - 1;
+    deal.pos = uint248(pos);
+    posToIlk[pos] = ilk_;
 
     emit AddDeal(ilk_);
   }

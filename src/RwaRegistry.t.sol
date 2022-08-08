@@ -336,6 +336,128 @@ contract RwaRegistryTest is Test {
     assertEq(count, expected, "Wrong count");
   }
 
+  function testSetPosToIlkReverseMapping() public {
+    // bytes32[] memory ilks_
+    // if (ilks_.length == 0) {
+    //   return;
+    // }
+
+    bytes32[] memory ilks_ = new bytes32[](3);
+    ilks_[0] = "RWA1337-A";
+    ilks_[1] = "RWA2448-A";
+    ilks_[2] = "RWA3559-A";
+
+    for (uint256 i = 0; i < ilks_.length; i++) {
+      reg.add(ilks_[i]);
+    }
+
+    assertEq(reg.posToIlk(0), ilks_[0], "Invalid ilk pos: 0");
+    assertEq(reg.posToIlk(1), ilks_[1], "Invalid ilk pos: 1");
+    assertEq(reg.posToIlk(2), ilks_[2], "Invalid ilk pos: 2");
+  }
+
+  function testIterDealIlksWithinBounds() public {
+    // bytes32 ilk0_, bytes32 ilk1_
+    // vm.assume(ilk0_ != ilk1_);
+
+    bytes32[] memory ilks_ = new bytes32[](4);
+    ilks_[0] = "RWA1337-A";
+    ilks_[1] = "RWA2448-A";
+    ilks_[2] = "RWA3559-A";
+    ilks_[3] = "RWA4660-A";
+
+    for (uint256 i = 0; i < ilks_.length; i++) {
+      reg.add(ilks_[i]);
+    }
+
+    bytes32[] memory actualIlks = reg.iter(1, 3);
+
+    assertEq(actualIlks.length, 2, "Wrong count");
+    assertEq(actualIlks[0], ilks_[1], "Wrong element at pos: 0");
+    assertEq(actualIlks[1], ilks_[2], "Wrong element at pos: 1");
+  }
+
+  function testIterDealIlksEndOutOfBounds() public {
+    // bytes32 ilk0_, bytes32 ilk1_
+    // vm.assume(ilk0_ != ilk1_);
+
+    bytes32[] memory ilks_ = new bytes32[](4);
+    ilks_[0] = "RWA1337-A";
+    ilks_[1] = "RWA2448-A";
+    ilks_[2] = "RWA3559-A";
+    ilks_[3] = "RWA4660-A";
+
+    for (uint256 i = 0; i < ilks_.length; i++) {
+      reg.add(ilks_[i]);
+    }
+
+    bytes32[] memory actualIlks = reg.iter(1, 10);
+
+    // We are starting form index 1, so there will be only 3 elements in the array
+    assertEq(actualIlks.length, 3, "Wrong count");
+    assertEq(actualIlks[0], ilks_[1], "Wrong element at pos: 0");
+    assertEq(actualIlks[1], ilks_[2], "Wrong element at pos: 1");
+    assertEq(actualIlks[2], ilks_[3], "Wrong element at pos: 2");
+  }
+
+  function testIterDealIlksFromZeroToLargeNumberIsEquivalentToList() public {
+    // bytes32 ilk0_, bytes32 ilk1_
+    // vm.assume(ilk0_ != ilk1_);
+
+    bytes32[] memory ilks_ = new bytes32[](4);
+    ilks_[0] = "RWA1337-A";
+    ilks_[1] = "RWA2448-A";
+    ilks_[2] = "RWA3559-A";
+    ilks_[3] = "RWA4660-A";
+
+    for (uint256 i = 0; i < ilks_.length; i++) {
+      reg.add(ilks_[i]);
+    }
+
+    bytes32[] memory iterIlks = reg.iter(0, 10);
+    bytes32[] memory listIlks = reg.list();
+
+    assertEq(abi.encodePacked(iterIlks), abi.encodePacked(listIlks), "Lists are not equal");
+  }
+
+  function testIterDealIlksEmptyIterationParams() public {
+    // bytes32 ilk0_, bytes32 ilk1_
+    // vm.assume(ilk0_ != ilk1_);
+
+    bytes32[] memory ilks_ = new bytes32[](4);
+    ilks_[0] = "RWA1337-A";
+    ilks_[1] = "RWA2448-A";
+    ilks_[2] = "RWA3559-A";
+    ilks_[3] = "RWA4660-A";
+
+    for (uint256 i = 0; i < ilks_.length; i++) {
+      reg.add(ilks_[i]);
+    }
+
+    bytes32[] memory iterIlks = reg.iter(0, 0);
+
+    assertEq(iterIlks.length, 0, "Should return an empty list");
+  }
+
+  function testReverIterDealIlksInvalidIterationParams() public {
+    // bytes32 ilk0_, bytes32 ilk1_
+    // vm.assume(ilk0_ != ilk1_);
+
+    bytes32[] memory ilks_ = new bytes32[](4);
+    ilks_[0] = "RWA1337-A";
+    ilks_[1] = "RWA2448-A";
+    ilks_[2] = "RWA3559-A";
+    ilks_[3] = "RWA4660-A";
+
+    for (uint256 i = 0; i < ilks_.length; i++) {
+      reg.add(ilks_[i]);
+    }
+
+    vm.expectRevert(RwaRegistry.InvalidIteration.selector);
+
+    reg.iter(10, 0);
+  }
+
   function testAddNewComponentToDeal() public {
     // bytes32 ilk_,
     // address urn_,

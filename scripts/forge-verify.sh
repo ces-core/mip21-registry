@@ -5,10 +5,10 @@ source "${BASH_SOURCE%/*}/_common.sh"
 
 function verify() {
   normalize-env-vars
-  check-required-etherscan-api-key
+  # check-required-etherscan-api-key
 
   local CHAIN="$(cast chain)"
-  [ CHAIN = 'ethlive' ] && CHAIN='mainnet'
+  [ "$CHAIN" == 'ethlive' ] && CHAIN='mainnet'
 
   local RESPONSE=
   # Log the command being issued
@@ -26,7 +26,7 @@ function verify() {
 }
 
 function check-required-etherscan-api-key() {
-  [ -n "$FOUNDRY_ETHERSCAN_API_KEY" ] || die "$(err-msg-etherscan-api-key)"
+  [ -n "$ETHERSCAN_API_KEY" ] || die "$(err-msg-etherscan-api-key)"
 }
 
 function usage() {
@@ -54,3 +54,4 @@ if [ "$0" = "$BASH_SOURCE" ]; then
 
   verify "$@"
 fi
+i

@@ -40,9 +40,9 @@ normalize-env-vars() {
 
   [ -n "$FOUNDRY_ETH_KEYSTORE_FILE" ] || die "$(err-msg-keystore-file)"
 
-  export FOUNDRY_ETHERSCAN_API_KEY="${FOUNDRY_ETHERSCAN_API_KEY:-$ETHERSCAN_API_KEY}"
+  # export FOUNDRY_ETHERSCAN_API_KEY="${FOUNDRY_ETHERSCAN_API_KEY:-$ETHERSCAN_API_KEY}"
   # Some commands require the prefixed env var, while others require the unprefixed one.
-  export ETHERSCAN_API_KEY="$FOUNDRY_ETHERSCAN_API_KEY"
+  # export ETHERSCAN_API_KEY="$FOUNDRY_ETHERSCAN_API_KEY"
 }
 
 # Handle reading from the password file

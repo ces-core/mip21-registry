@@ -4,4 +4,7 @@ test = 'src'
 out = 'out'
 libs = ['lib']
 gas_reports = ["*"]
+solc = "0.8.14"
+# eth-rpc-url = "https://eth-mainnet.g.alchemy.com/v2/jW0qEO_l3EmfjnI2bU2ArS32huditnHg"
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

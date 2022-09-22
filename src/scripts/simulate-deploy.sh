@@ -14,14 +14,14 @@ simulate-deploy() {
   fi
 
   ANVIL_PORT=${ANVIL_PORT:-8546}
-  local FORK_RPC_URL="http://localhost:${ANVIL_PORT}"
+  local ANVIL_RPC_URL="http://localhost:${ANVIL_PORT}"
 
   # Start anvil
   anvil --port $ANVIL_PORT $@ &
   local ANVIL_PID=$!
   sleep 3
 
-  local RESPONSE=$($FORGE_SCRIPT DeployRwaRegistry -vvv --broadcast --rpc-url $FORK_RPC_URL | tee >(cat 1>&2))
+  local RESPONSE=$($FORGE_SCRIPT DeployRwaRegistry -vvv --broadcast --rpc-url $ANVIL_RPC_URL | tee >(cat 1>&2))
   local MIP21_REGISTRY=$(jq -Rr 'fromjson? | .returns["0"].value' <<<"$RESPONSE")
 
   # Impersonate MCD_PAUSE_PROXY to be able to modify the changelog

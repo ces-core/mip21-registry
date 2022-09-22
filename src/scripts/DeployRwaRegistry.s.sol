@@ -4,8 +4,6 @@ pragma solidity ^0.8.14;
 
 import "forge-std/Script.sol";
 
-import "forge-std/test.sol";
-
 import {ChainlogAbstract} from "dss-interfaces/dss/ChainlogAbstract.sol";
 import {VatAbstract} from "dss-interfaces/dss/VatAbstract.sol";
 import {IlkRegistryAbstract} from "dss-interfaces/dss/IlkRegistryAbstract.sol";
@@ -30,18 +28,8 @@ contract DeployRwaRegistry is Script {
     rwaLiquidationOracle = chainlog.getAddress("MIP21_LIQUIDATION_ORACLE");
   }
 
-  function run() external {
-
-    // We want to ensure the RwaRegistry address is registered in the Chainlog
-    // so we calculate the deployment address and write to the changelog before deploying
-    uint256 nonce = vm.getNonce(vm.envAddress("ETH_FROM"));
-    console2.log("nonce", nonce);
-    address regAddress = computeCreateAddress(vm.envAddress("ETH_FROM"), nonce);
-    vm.prank(mcdPauseProxy);
-    chainlog.setAddress("RWA_REGISTRY", regAddress);
-
-    // Deploy the contracts using our own wallet
-    vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+  function run() external returns (address) {
+    vm.startBroadcast();
 
     reg = new RwaRegistry();
 
@@ -52,6 +40,8 @@ contract DeployRwaRegistry is Script {
     reg.deny(msg.sender);
 
     vm.stopBroadcast();
+
+    return address(reg);
   }
 
   function _addRWA008A() internal {

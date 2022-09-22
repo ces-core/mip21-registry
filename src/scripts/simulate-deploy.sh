@@ -13,11 +13,11 @@ simulate-deploy() {
     exit 1
   fi
 
-  local ANVIL_PORT=8546
+  ANVIL_PORT=${ANVIL_PORT:-8546}
   local FORK_RPC_URL="http://localhost:${ANVIL_PORT}"
 
   # Start anvil
-  anvil --port 8546 $@ &
+  anvil --port $ANVIL_PORT $@ &
   local ANVIL_PID=$!
   sleep 3
 
@@ -50,7 +50,7 @@ MSG
 
 usage() {
   cat <<MSG
-simulate-deploy.sh --fork-url <MAINNET_RPC_ENDPOINT>
+[ ANVIL_PORT=8888 ] simulate-deploy.sh --fork-url <MAINNET_RPC_ENDPOINT>
 MSG
 }
 

@@ -72,7 +72,7 @@ contract RwaRegistry {
    * @param addr The component address.
    * @param variant The component variant.
    */
-  event File(bytes32 indexed ilk, bytes32 indexed what, bytes32 name, address addr, uint88 variant);
+  event File(bytes32 indexed ilk, bytes32 indexed what, bytes32 indexed name, address addr, uint88 variant);
 
   /**
    * @notice The deal identified by `ilk` was added to the registry.

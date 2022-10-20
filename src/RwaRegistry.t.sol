@@ -17,12 +17,18 @@ contract RwaRegistryTest is Test {
   //////////////////////////////////*/
 
   function testRely() public {
+    vm.expectEmit(true, false, false, false);
+    emit Rely(address(0x1337));
+
     reg.rely(address(0x1337));
 
     assertEq(reg.wards(address(0x1337)), 1);
   }
 
   function testDeny() public {
+    vm.expectEmit(true, false, false, false);
+    emit Deny(address(this));
+
     reg.deny(address(this));
 
     assertEq(reg.wards(address(this)), 0);
@@ -42,6 +48,9 @@ contract RwaRegistryTest is Test {
   }
 
   function testAddSupportedComponent() public {
+    vm.expectEmit(true, false, false, false);
+    emit AddSupportedComponent("somethingElse");
+
     reg.addSupportedComponent("somethingElse");
 
     assertEq(reg.isSupportedComponent("somethingElse"), 1);
@@ -109,6 +118,14 @@ contract RwaRegistryTest is Test {
     variants[2] = 1;
     variants[3] = 1;
     variants[4] = 1;
+
+    vm.expectEmit(true, false, false, false);
+    emit AddDeal(ilk_);
+
+    for (uint256 i = 0; i < names.length; i++) {
+      vm.expectEmit(true, true, true, true);
+      emit File(ilk_, "component", names[i], addrs[i], variants[i]);
+    }
 
     reg.add(ilk_, names, addrs, variants);
 
@@ -594,6 +611,9 @@ contract RwaRegistryTest is Test {
     originalVariants[0] = 1;
     reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
+    vm.expectEmit(true, false, false, false);
+    emit FinalizeDeal(ilk_);
+
     reg.finalize(ilk_);
 
     (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
@@ -636,4 +656,11 @@ contract RwaRegistryTest is Test {
     vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, ilk_));
     reg.file(ilk_, "component", "urn", address(0x2448), 2);
   }
+
+  event Rely(address indexed usr);
+  event Deny(address indexed usr);
+  event File(bytes32 indexed ilk, bytes32 indexed what, bytes32 indexed name, address addr, uint88 variant);
+  event AddDeal(bytes32 indexed ilk);
+  event FinalizeDeal(bytes32 indexed ilk);
+  event AddSupportedComponent(bytes32 indexed component);
 }

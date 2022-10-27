@@ -114,13 +114,6 @@ contract RwaRegistry {
   error DealIsNotActive(bytes32 ilk);
 
   /**
-   * @notice Revert reason when trying to add a component with address set to `address(0)`.
-   * @param ilk The ilk related to the deal being added.
-   * @param name The component name.
-   */
-  error InvalidComponentAddress(bytes32 ilk, bytes32 name);
-
-  /**
    * @notice Revert reason when trying to add an unsupported component.
    * @param name The unsupported component name.
    */
@@ -133,6 +126,20 @@ contract RwaRegistry {
   error ComponentAlreadySupported(bytes32 name);
 
   /**
+   * @notice Revert reason when trying to add a component with address set to `address(0)`.
+   * @param ilk The ilk related to the deal being added.
+   * @param name The component name.
+   */
+  error InvalidComponentAddress(bytes32 ilk, bytes32 name);
+
+  /**
+   * @notice Revert reason when trying to get a component `name` which does not exist for the deal identified by `ilk`
+   * @param ilk The ilk name.
+   * @param name The unsupported component name.
+   */
+  error ComponentDoesNotExist(bytes32 ilk, bytes32 name);
+
+  /**
    * @notice Revert reason when trying to add components with mismatching params.
    */
   error MismatchingComponentParams();
@@ -141,13 +148,6 @@ contract RwaRegistry {
    * @notice Revert reason when calling iterator methods with bad parameters.
    */
   error InvalidIteration();
-
-  /**
-   * @notice Revert reason when trying to get a component `name` which does not exist for the deal identified by `ilk`
-   * @param ilk The ilk name.
-   * @param name The unsupported component name.
-   */
-  error ComponentDoesNotExist(bytes32 ilk, bytes32 name);
 
   /**
    * @notice Only addresses with admin access can call methods with this modifier.

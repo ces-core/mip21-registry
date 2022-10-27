@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: GPL-3.0-or-later
+
 pragma solidity ^0.8.14;
+
+import {EnumerableSet} from "./EnumerableSet.sol";
 
 /**
  * @title RWA Registry
@@ -8,6 +11,8 @@ pragma solidity ^0.8.14;
  * @notice Registry for different deals onboarded into MCD.
  */
 contract RwaRegistry {
+  using EnumerableSet for EnumerableSet.Bytes32Set;
+
   /**
    * ┌──────┐     add()    ┌────────┐  finalize()  ┌───────────┐
    * │ NONE ├─────────────►│ ACTIVE ├─────────────►│ FINALIZED │
@@ -23,8 +28,8 @@ contract RwaRegistry {
   struct Deal {
     DealStatus status; // Whether the deal exists or not.
     uint248 pos; // Index in ilks array.
-    bytes32[] components; // List of components for the deal.
-    mapping(bytes32 => Component) nameToComponent; // Associate a component name to its params. nameToComponent[componentName].
+    EnumerableSet.Bytes32Set _components; // Set of components for the deal.
+    mapping(bytes32 => Component) _nameToComponent; // Associate a component name to its params. _nameToComponent[componentName].
   }
 
   // Architeture Components. `name` is not needed in storage because it is the mapping key.
@@ -37,20 +42,14 @@ contract RwaRegistry {
   /// @notice Addresses with admin access on this contract. `wards[usr]`.
   mapping(address => uint256) public wards;
 
-  /// @notice Append-only list of all supported component names.
-  bytes32[] public supportedComponents;
+  /// @notice An enumerable set of all supported component names.
+  EnumerableSet.Bytes32Set internal _supportedComponents;
 
-  /// @notice Whether a component name is supported or not. `isSupportedComponent[name]`.
-  mapping(bytes32 => uint256) public isSupportedComponent;
+  /// @notice An enumerable set of all registered ilks.
+  EnumerableSet.Bytes32Set internal _ilks;
 
-  /// @notice List of all RWA ilks in this registry.
-  bytes32[] public ilks;
-
-  /// @notice Maps a RWA ilk to the related deal. `ilkToDeal[ilk]`
-  mapping(bytes32 => Deal) public ilkToDeal;
-
-  /// @notice Maps the position in the RWA ilks list to the actual ilk. `postToIlk[pos]`
-  mapping(uint256 => bytes32) public posToIlk;
+  /// @notice Maps a RWA ilk to the related deal. `_ilkToDeal[ilk]`
+  mapping(bytes32 => Deal) internal _ilkToDeal;
 
   /**
    * @notice `usr` was granted admin access.
@@ -63,16 +62,6 @@ contract RwaRegistry {
    * @param usr The user address.
    */
   event Deny(address indexed usr);
-
-  /**
-   * @notice Deal component `what` identified by `ilk` was updated in the registry.
-   * @param ilk The ilk name.
-   * @param what What is being changed. The only possible value for this signature is "component".
-   * @param name The component name.
-   * @param addr The component address.
-   * @param variant The component variant.
-   */
-  event File(bytes32 indexed ilk, bytes32 indexed what, bytes32 indexed name, address addr, uint88 variant);
 
   /**
    * @notice The deal identified by `ilk` was added to the registry.
@@ -91,6 +80,15 @@ contract RwaRegistry {
    * @param component The new supported component name.
    */
   event AddSupportedComponent(bytes32 indexed component);
+
+  /**
+   * @notice A Deal component for `ilk` was set.
+   * @param ilk The ilk name.
+   * @param name The component name.
+   * @param addr The component address.
+   * @param variant The component variant.
+   */
+  event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint88 variant);
 
   /**
    * @notice Revert reason when `msg.sender` does not have the required admin access.
@@ -116,11 +114,11 @@ contract RwaRegistry {
   error DealIsNotActive(bytes32 ilk);
 
   /**
-   * @notice Revert reason when trying to modify an unsupported parameter.
-   * @param ilk The ilk related to the deal being modified.
-   * @param what The parameter name.
+   * @notice Revert reason when trying to add a component with address set to `address(0)`.
+   * @param ilk The ilk related to the deal being added.
+   * @param name The component name.
    */
-  error UnsupportedParameter(bytes32 ilk, bytes32 what);
+  error InvalidComponentAddress(bytes32 ilk, bytes32 name);
 
   /**
    * @notice Revert reason when trying to add an unsupported component.
@@ -166,20 +164,20 @@ contract RwaRegistry {
    * @dev Adds the default supported component names to the registry.
    */
   constructor() {
-    isSupportedComponent["urn"] = 1;
-    supportedComponents.push("urn");
+    _supportedComponents.add("urn");
+    emit AddSupportedComponent("urn");
 
-    isSupportedComponent["liquidationOracle"] = 1;
-    supportedComponents.push("liquidationOracle");
+    _supportedComponents.add("liquidationOracle");
+    emit AddSupportedComponent("liquidationOracle");
 
-    isSupportedComponent["outputConduit"] = 1;
-    supportedComponents.push("outputConduit");
+    _supportedComponents.add("outputConduit");
+    emit AddSupportedComponent("outputConduit");
 
-    isSupportedComponent["inputConduit"] = 1;
-    supportedComponents.push("inputConduit");
+    _supportedComponents.add("inputConduit");
+    emit AddSupportedComponent("inputConduit");
 
-    isSupportedComponent["jar"] = 1;
-    supportedComponents.push("jar");
+    _supportedComponents.add("jar");
+    emit AddSupportedComponent("jar");
 
     wards[msg.sender] = 1;
     emit Rely(msg.sender);
@@ -214,17 +212,25 @@ contract RwaRegistry {
   /**
    * @notice Adds a supported component name to the registry.
    * @dev Adds a new type of component that should be supported.
-   * @param name_ The "pascalCased" name of the component.
+   * @param name The "pascalCased" name of the component.
    */
-  function addSupportedComponent(bytes32 name_) external auth {
-    if (isSupportedComponent[name_] != 0) {
-      revert ComponentAlreadySupported(name_);
+  function addSupportedComponent(bytes32 name) external auth {
+    if (_supportedComponents.contains(name)) {
+      revert ComponentAlreadySupported(name);
     }
 
-    isSupportedComponent[name_] = 1;
-    supportedComponents.push(name_);
+    _supportedComponents.add(name);
 
-    emit AddSupportedComponent(name_);
+    emit AddSupportedComponent(name);
+  }
+
+  /**
+   * @notice Returns whether a component name is supported or not.
+   * @param name The "pascalCased" name of the component.
+   * @return Whether a component name is supported or not.
+   */
+  function isSupportedComponent(bytes32 name) external view returns (bool) {
+    return _supportedComponents.contains(name);
   }
 
   /**
@@ -232,7 +238,7 @@ contract RwaRegistry {
    * @return The list of component names.
    */
   function listSupportedComponents() external view returns (bytes32[] memory) {
-    return supportedComponents;
+    return _supportedComponents.values();
   }
 
   /*//////////////////////////////////
@@ -240,73 +246,94 @@ contract RwaRegistry {
   //////////////////////////////////*/
 
   /**
-   * @notice Adds a deal identified by `ilk_` to the registry.
-   * @param ilk_ The ilk name.
+   * @notice Adds a deal identified by `ilk` to the registry.
+   * @param ilk The ilk name.
    */
-  function add(bytes32 ilk_) external auth {
-    _addDeal(ilk_);
+  function add(bytes32 ilk) external auth {
+    _addDeal(ilk);
   }
 
   /**
-   * @notice Adds a deal identified by `ilk_` with its components to the registry.
-   * @param ilk_ The ilk name.
-   * @param names_ The list of component names.
-   * @param addrs_ The list of component addresses.
-   * @param variants_ The list of component variants.
+   * @notice Adds a deal identified by `ilk` with its components to the registry.
+   * @param ilk The ilk name.
+   * @param names The list of component names.
+   * @param addrs The list of component addresses.
+   * @param variants The list of component variants.
    */
   function add(
-    bytes32 ilk_,
-    bytes32[] calldata names_,
-    address[] calldata addrs_,
-    uint88[] calldata variants_
+    bytes32 ilk,
+    bytes32[] calldata names,
+    address[] calldata addrs,
+    uint88[] calldata variants
   ) external auth {
-    _addDeal(ilk_);
-    _addComponents(ilk_, names_, addrs_, variants_);
+    _addDeal(ilk);
+    _addComponents(ilk, names, addrs, variants);
   }
 
   /**
    * @notice Marks the deal identified by `ilk` as finalized. i
    * @dev Further registry updates for that deal will be forbidden.
-   * @param ilk_ The ilk name.
+   * @param ilk The ilk name.
    */
-  function finalize(bytes32 ilk_) external auth {
-    Deal storage deal = ilkToDeal[ilk_];
+  function finalize(bytes32 ilk) external auth {
+    Deal storage deal = _ilkToDeal[ilk];
 
     if (deal.status != DealStatus.ACTIVE) {
-      revert DealIsNotActive(ilk_);
+      revert DealIsNotActive(ilk);
     }
 
     deal.status = DealStatus.FINALIZED;
 
-    emit FinalizeDeal(ilk_);
+    emit FinalizeDeal(ilk);
   }
 
   /**
-   * @notice Updates the components of an existing `ilk_`.
-   * @param ilk_ The ilk name.
-   * @param what_ What is being changed. One of ["component"].
-   * @param name_ The name of the component. Must be one of the supported ones.
-   * @param addr_ The address of the component.
-   * @param variant_ The variant of the component.
+   * @notice Adds or updates a component of an existing `ilk`.
+   * @param ilk The ilk name.
+   * @param name The name of the component. Must be one of the supported ones.
+   * @param addr The address of the component.
+   * @param variant The variant of the component.
    */
-  function file(
-    bytes32 ilk_,
-    bytes32 what_,
-    bytes32 name_,
-    address addr_,
-    uint88 variant_
+  function setComponent(
+    bytes32 ilk,
+    bytes32 name,
+    address addr,
+    uint88 variant
   ) external auth {
-    if (what_ != "component") {
-      revert UnsupportedParameter(ilk_, what_);
-    }
-
-    Deal storage deal = ilkToDeal[ilk_];
+    Deal storage deal = _ilkToDeal[ilk];
 
     if (deal.status != DealStatus.ACTIVE) {
-      revert DealIsNotActive(ilk_);
+      revert DealIsNotActive(ilk);
     }
 
-    _addOrUpdateComponent(ilk_, name_, addr_, variant_);
+    _addOrUpdateComponent(ilk, name, addr, variant);
+  }
+
+  /**
+   * @notice Removes a component from an existing `ilk`.
+   * @param ilk The ilk name.
+   * @param name The name of the component. Must be one of the supported ones.
+   */
+  function removeComponent(bytes32 ilk, bytes32 name) external auth {
+    Deal storage deal = _ilkToDeal[ilk];
+
+    if (deal.status != DealStatus.ACTIVE) {
+      revert DealIsNotActive(ilk);
+    }
+
+    deal._components.remove(name);
+    delete deal._nameToComponent[name];
+  }
+
+  /**
+   * @notice Returns the deal info for the given ilk.
+   * @param ilk The ilk name.
+   * @return status The deal status.
+   * @return pos The ilk position in the ilk set.
+   */
+  function ilkToDeal(bytes32 ilk) external view returns (DealStatus status, uint256 pos) {
+    Deal storage deal = _ilkToDeal[ilk];
+    return (deal.status, deal.pos);
   }
 
   /**
@@ -314,7 +341,7 @@ contract RwaRegistry {
    * @return The list of ilks.
    */
   function list() external view returns (bytes32[] memory) {
-    return ilks;
+    return _ilks.values();
   }
 
   /**
@@ -332,14 +359,15 @@ contract RwaRegistry {
       revert InvalidIteration();
     }
 
-    end = end > ilks.length ? ilks.length : end;
+    uint256 ilksLength = _ilks.length();
+    end = end > ilksLength ? ilksLength : end;
 
     // Since `end` is exclusive, if start == end, then it should return an empty array;
     uint256 size = end - start;
     bytes32[] memory result = new bytes32[](size);
 
     for (uint256 i = 0; i < size; i++) {
-      result[i] = ilks[start + i];
+      result[i] = _ilks.at(start + i);
     }
 
     return result;
@@ -350,32 +378,41 @@ contract RwaRegistry {
    * @return The amount of ilks.
    */
   function count() external view returns (uint256) {
-    return ilks.length;
+    return _ilks.length();
   }
 
   /**
-   * @notice Returns the list of components associated to `ilk_`.
-   * @param ilk_ The ilk name.
+   * @notice Returns the ilk at a given position.
+   * @param pos The desired position.
+   * @return The ilk.
+   */
+  function posToIlk(uint256 pos) external view returns (bytes32) {
+    return _ilks.at(pos);
+  }
+
+  /**
+   * @notice Returns the list of components associated to `ilk`.
+   * @param ilk The ilk name.
    * @return The list of component names.
    */
-  function listComponentNamesOf(bytes32 ilk_) external view returns (bytes32[] memory) {
-    Deal storage deal = ilkToDeal[ilk_];
+  function listComponentNamesOf(bytes32 ilk) external view returns (bytes32[] memory) {
+    Deal storage deal = _ilkToDeal[ilk];
 
     if (deal.status == DealStatus.NONE) {
-      revert DealDoesNotExist(ilk_);
+      revert DealDoesNotExist(ilk);
     }
 
-    return deal.components;
+    return deal._components.values();
   }
 
   /**
-   * @notice Returns the list of components associated to `ilk_`.
-   * @param ilk_ The ilk name.
+   * @notice Returns the list of components associated to `ilk`.
+   * @param ilk The ilk name.
    * @return names The list of component names.
    * @return addrs The list of component addresses.
    * @return variants The list of component variants.
    */
-  function listComponentsOf(bytes32 ilk_)
+  function listComponentsOf(bytes32 ilk)
     external
     view
     returns (
@@ -384,21 +421,21 @@ contract RwaRegistry {
       uint88[] memory variants
     )
   {
-    Deal storage deal = ilkToDeal[ilk_];
+    Deal storage deal = _ilkToDeal[ilk];
 
     if (deal.status == DealStatus.NONE) {
-      revert DealDoesNotExist(ilk_);
+      revert DealDoesNotExist(ilk);
     }
 
-    bytes32[] storage components = deal.components;
-    names = new bytes32[](components.length);
-    addrs = new address[](components.length);
-    variants = new uint88[](components.length);
+    uint256 length = deal._components.length();
 
-    for (uint256 i = 0; i < components.length; i++) {
-      Component storage component = deal.nameToComponent[components[i]];
+    names = deal._components.values();
+    addrs = new address[](length);
+    variants = new uint88[](length);
 
-      names[i] = components[i];
+    for (uint256 i = 0; i < names.length; i++) {
+      Component storage component = deal._nameToComponent[names[i]];
+
       addrs[i] = component.addr;
       variants[i] = component.variant;
     }
@@ -407,22 +444,22 @@ contract RwaRegistry {
   /**
    * @notice Gets a specific component from a deal identified by `ilk`.
    * @dev It will revert if the deal or the component does not exist.
-   * @param ilk_ The ilk name.
-   * @param name_ The name of the component.
+   * @param ilk The ilk name.
+   * @param name The name of the component.
    * @return addr The component address.
    * @return variant The component variant.
    */
-  function getComponent(bytes32 ilk_, bytes32 name_) external view returns (address addr, uint88 variant) {
-    Deal storage deal = ilkToDeal[ilk_];
+  function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint88 variant) {
+    Deal storage deal = _ilkToDeal[ilk];
 
     if (deal.status == DealStatus.NONE) {
-      revert DealDoesNotExist(ilk_);
+      revert DealDoesNotExist(ilk);
     }
 
-    Component storage component = deal.nameToComponent[name_];
+    Component storage component = deal._nameToComponent[name];
 
     if (!component.exists) {
-      revert ComponentDoesNotExist(ilk_, name_);
+      revert ComponentDoesNotExist(ilk, name);
     }
 
     addr = component.addr;
@@ -434,78 +471,79 @@ contract RwaRegistry {
   //////////////////////////////////*/
 
   /**
-   * @notice Adds a deal identified by `ilk_` with its components to the registry.
-   * @param ilk_ The ilk name.
+   * @notice Adds a deal identified by `ilk` with its components to the registry.
+   * @param ilk The ilk name.
    */
-  function _addDeal(bytes32 ilk_) internal {
-    Deal storage deal = ilkToDeal[ilk_];
+  function _addDeal(bytes32 ilk) internal {
+    Deal storage deal = _ilkToDeal[ilk];
 
     if (deal.status != DealStatus.NONE) {
-      revert DealAlreadyExists(ilk_);
+      revert DealAlreadyExists(ilk);
     }
 
-    ilks.push(ilk_);
+    _ilks.add(ilk);
 
     deal.status = DealStatus.ACTIVE;
+    deal.pos = uint248(_ilks.length());
 
-    uint256 pos = ilks.length - 1;
-    deal.pos = uint248(pos);
-    posToIlk[pos] = ilk_;
-
-    emit AddDeal(ilk_);
+    emit AddDeal(ilk);
   }
 
   /**
-   * @notice Adds the components associated to a deal identified by `ilk_`.
+   * @notice Adds the components associated to a deal identified by `ilk`.
    * @dev All array arguments must have the same length and order.
-   * @param ilk_ The ilk name.
-   * @param names_ The list of component names.
-   * @param addrs_ The list of component addresses.
-   * @param variants_ The list of component variants.
+   * @param ilk The ilk name.
+   * @param names The list of component names.
+   * @param addrs The list of component addresses.
+   * @param variants The list of component variants.
    */
   function _addComponents(
-    bytes32 ilk_,
-    bytes32[] calldata names_,
-    address[] calldata addrs_,
-    uint88[] calldata variants_
+    bytes32 ilk,
+    bytes32[] calldata names,
+    address[] calldata addrs,
+    uint88[] calldata variants
   ) internal {
-    if (!(names_.length == addrs_.length && names_.length == variants_.length)) {
+    if (!(names.length == addrs.length && names.length == variants.length)) {
       revert MismatchingComponentParams();
     }
 
-    for (uint256 i = 0; i < names_.length; i++) {
-      _addOrUpdateComponent(ilk_, names_[i], addrs_[i], variants_[i]);
+    for (uint256 i = 0; i < names.length; i++) {
+      _addOrUpdateComponent(ilk, names[i], addrs[i], variants[i]);
     }
   }
 
   /**
-   * @notice Adds a component to or updates a componenet of an existing `ilk_`.
-   * @param ilk_ The ilk name.
-   * @param name_ The name of the component. Must be one of the supported ones.
-   * @param addr_ The address of the component.
-   * @param variant_ The variant of the component.
+   * @notice Adds a component to or updates a componenet of an existing `ilk`.
+   * @param ilk The ilk name.
+   * @param name The name of the component. Must be one of the supported ones.
+   * @param addr The address of the component.
+   * @param variant The variant of the component.
    */
   function _addOrUpdateComponent(
-    bytes32 ilk_,
-    bytes32 name_,
-    address addr_,
-    uint88 variant_
+    bytes32 ilk,
+    bytes32 name,
+    address addr,
+    uint88 variant
   ) internal {
-    if (isSupportedComponent[name_] == 0) {
-      revert UnsupportedComponent(name_);
+    if (!_supportedComponents.contains(name)) {
+      revert UnsupportedComponent(name);
     }
 
-    Deal storage deal = ilkToDeal[ilk_];
-    Component storage component = deal.nameToComponent[name_];
+    if (addr == address(0)) {
+      revert InvalidComponentAddress(ilk, name);
+    }
+
+    Deal storage deal = _ilkToDeal[ilk];
+    Component storage component = deal._nameToComponent[name];
 
     if (!component.exists) {
-      deal.components.push(name_);
+      deal._components.add(name);
       component.exists = true;
     }
 
-    component.addr = addr_;
-    component.variant = variant_;
+    component.addr = addr;
+    component.variant = variant;
 
-    emit File(ilk_, "component", name_, addr_, variant_);
+    emit SetComponent(ilk, name, addr, variant);
   }
 }

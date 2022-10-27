@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: GPL-3.0-or-later
+
 pragma solidity ^0.8.14;
 
 import "forge-std/Test.sol";
@@ -40,11 +41,11 @@ contract RwaRegistryTest is Test {
 
   function testAddDefaultSupportedComponentsDuringDeployment() public {
     assertEq(reg.listSupportedComponents().length, 5);
-    assertEq(reg.isSupportedComponent("urn"), 1);
-    assertEq(reg.isSupportedComponent("liquidationOracle"), 1);
-    assertEq(reg.isSupportedComponent("outputConduit"), 1);
-    assertEq(reg.isSupportedComponent("inputConduit"), 1);
-    assertEq(reg.isSupportedComponent("jar"), 1);
+    assertEq(reg.isSupportedComponent("urn"), true);
+    assertEq(reg.isSupportedComponent("liquidationOracle"), true);
+    assertEq(reg.isSupportedComponent("outputConduit"), true);
+    assertEq(reg.isSupportedComponent("inputConduit"), true);
+    assertEq(reg.isSupportedComponent("jar"), true);
   }
 
   function testAddSupportedComponent() public {
@@ -53,7 +54,7 @@ contract RwaRegistryTest is Test {
 
     reg.addSupportedComponent("somethingElse");
 
-    assertEq(reg.isSupportedComponent("somethingElse"), 1);
+    assertEq(reg.isSupportedComponent("somethingElse"), true);
   }
 
   function testRevertAddExistingSupportedComponent() public {
@@ -124,7 +125,7 @@ contract RwaRegistryTest is Test {
 
     for (uint256 i = 0; i < names.length; i++) {
       vm.expectEmit(true, true, true, true);
-      emit File(ilk_, "component", names[i], addrs[i], variants[i]);
+      emit SetComponent(ilk_, names[i], addrs[i], variants[i]);
     }
 
     reg.add(ilk_, names, addrs, variants);
@@ -177,6 +178,27 @@ contract RwaRegistryTest is Test {
     variants[1] = 1;
 
     vm.expectRevert(abi.encodeWithSelector(RwaRegistry.UnsupportedComponent.selector, names[1]));
+    reg.add(ilk_, names, addrs, variants);
+  }
+
+  function testRevertAddDealWithComponentWithInvalidAddress() public {
+    // bytes32 ilk_,
+    // address urn_,
+    // address someAddr,
+
+    bytes32 ilk_ = "RWA1337-A";
+    address urn_ = address(0);
+
+    bytes32[] memory names = new bytes32[](1);
+    names[0] = "urn";
+
+    address[] memory addrs = new address[](1);
+    addrs[0] = urn_;
+
+    uint88[] memory variants = new uint88[](1);
+    variants[0] = 1;
+
+    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.InvalidComponentAddress.selector, ilk_, names[0]));
     reg.add(ilk_, names, addrs, variants);
   }
 
@@ -485,7 +507,7 @@ contract RwaRegistryTest is Test {
     uint88 variant_ = 0x2830;
     reg.add(ilk_);
 
-    reg.file(ilk_, "component", "urn", urn_, variant_);
+    reg.setComponent(ilk_, "urn", urn_, variant_);
 
     (address addr, uint88 variant) = reg.getComponent(ilk_, "urn");
     assertEq(addr, urn_, "Component address mismatch");
@@ -509,10 +531,34 @@ contract RwaRegistryTest is Test {
     reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
     uint88 variant_ = 0x2830;
-    reg.file(ilk_, "component", "urn", urn_, variant_);
+    reg.setComponent(ilk_, "urn", urn_, variant_);
 
     (, uint88 updatedVariant) = reg.getComponent(ilk_, "urn");
     assertEq(updatedVariant, variant_, "Component variant mismatch");
+  }
+
+  function testRemoveDealComponent() public {
+    // bytes32 ilk_,
+    // address urn_,
+    // uint88 variant_
+
+    bytes32 ilk_ = "RWA1337-A";
+    address urn_ = address(0x3549);
+
+    bytes32[] memory originalNames = new bytes32[](1);
+    address[] memory originalAddrs = new address[](1);
+    uint88[] memory originalVariants = new uint88[](1);
+    originalNames[0] = "urn";
+    originalAddrs[0] = urn_;
+    originalVariants[0] = 1;
+    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+    reg.removeComponent(ilk_, "urn");
+
+    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("urn")));
+    reg.getComponent(ilk_, "urn");
+
+    assertEq(reg.listComponentNamesOf(ilk_).length, 0);
   }
 
   function testReverGetComponentForUnexistingDeal() public {
@@ -556,22 +602,6 @@ contract RwaRegistryTest is Test {
     reg.getComponent(ilk_, "liquidationOracle");
   }
 
-  function testReverUpdateUnexistingParameter() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // uint88 variant_
-
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x2448);
-    uint88 variant_ = 0x2830;
-    reg.add(ilk_);
-
-    vm.expectRevert(
-      abi.encodeWithSelector(RwaRegistry.UnsupportedParameter.selector, ilk_, bytes32("unexistingParameter"))
-    );
-    reg.file(ilk_, "unexistingParameter", "urn", urn_, variant_);
-  }
-
   function testRevertUnautorizedUpdateDeal() public {
     // address sender_,
     // bytes32 ilk_,
@@ -595,7 +625,7 @@ contract RwaRegistryTest is Test {
     vm.expectRevert(RwaRegistry.Unauthorized.selector);
     vm.prank(sender_);
 
-    reg.file(ilk_, "component", "urn", address(0x1337), 1337);
+    reg.setComponent(ilk_, "urn", address(0x1337), 1337);
   }
 
   function testFinalizeComponent() public {
@@ -654,12 +684,12 @@ contract RwaRegistryTest is Test {
     reg.finalize(ilk_);
 
     vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, ilk_));
-    reg.file(ilk_, "component", "urn", address(0x2448), 2);
+    reg.setComponent(ilk_, "urn", address(0x2448), 2);
   }
 
   event Rely(address indexed usr);
   event Deny(address indexed usr);
-  event File(bytes32 indexed ilk, bytes32 indexed what, bytes32 indexed name, address addr, uint88 variant);
+  event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint88 variant);
   event AddDeal(bytes32 indexed ilk);
   event FinalizeDeal(bytes32 indexed ilk);
   event AddSupportedComponent(bytes32 indexed component);

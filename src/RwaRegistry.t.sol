@@ -502,7 +502,7 @@ contract RwaRegistryTest is Test {
 
         bytes32 ilk_ = "RWA1337-A";
         address urn_ = address(0x3549);
-        uint8 variant_ = 0x2830;
+        uint8 variant_ = 0x28;
         reg.add(ilk_);
 
         reg.setComponent(ilk_, "urn", urn_, variant_);
@@ -529,7 +529,7 @@ contract RwaRegistryTest is Test {
         originalVariants[0] = 1;
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
-        uint8 variant_ = 0x2830;
+        uint8 variant_ = 0x28;
         reg.setComponent(ilk_, "urn", urn_, variant_);
 
         (, uint8 updatedVariant) = reg.getComponent(ilk_, "urn");
@@ -624,7 +624,7 @@ contract RwaRegistryTest is Test {
         vm.expectRevert(RwaRegistry.Unauthorized.selector);
         vm.prank(sender_);
 
-        reg.setComponent(ilk_, "urn", address(0x1337), 1337);
+        reg.setComponent(ilk_, "urn", address(0x1337), 133);
     }
 
     function testFinalizeComponent() public {

@@ -509,6 +509,7 @@ contract RwaRegistryTest is Test {
 
     reg.setComponent(ilk_, "urn", urn_, variant_);
 
+    assertTrue(reg.hasComponent(ilk_, "urn"));
     (address addr, uint88 variant) = reg.getComponent(ilk_, "urn");
     assertEq(addr, urn_, "Component address mismatch");
     assertEq(variant, variant_, "Component variant mismatch");

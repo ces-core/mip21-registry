@@ -442,6 +442,17 @@ contract RwaRegistry {
   }
 
   /**
+   * @notice Check a specific component from a deal identified by `ilk` exists.
+   * @dev Returns `false` if the deal or the component does not exist.
+   * @param ilk The ilk name.
+   * @param name The name of the component.
+   * @return Whether the component exists or not.
+   */
+  function hasComponent(bytes32 ilk, bytes32 name) external view returns (bool) {
+    return _ilkToDeal[ilk]._nameToComponent[name].exists;
+  }
+
+  /**
    * @notice Gets a specific component from a deal identified by `ilk`.
    * @dev It will revert if the deal or the component does not exist.
    * @param ilk The ilk name.

@@ -36,7 +36,7 @@ contract RwaRegistry {
     struct Component {
         bool exists; // Whether the component exists or not.
         address addr; // Address of the component.
-        uint88 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
+        uint8 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
     }
 
     /// @notice Addresses with admin access on this contract. `wards[usr]`.
@@ -88,7 +88,7 @@ contract RwaRegistry {
      * @param addr The component address.
      * @param variant The component variant.
      */
-    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint88 variant);
+    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint8 variant);
 
     /**
      * @notice Revert reason when `msg.sender` does not have the required admin access.
@@ -264,7 +264,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32[] calldata names,
         address[] calldata addrs,
-        uint88[] calldata variants
+        uint8[] calldata variants
     ) external auth {
         _addDeal(ilk);
         _addComponents(ilk, names, addrs, variants);
@@ -298,7 +298,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32 name,
         address addr,
-        uint88 variant
+        uint8 variant
     ) external auth {
         Deal storage deal = _ilkToDeal[ilk];
 
@@ -418,7 +418,7 @@ contract RwaRegistry {
         returns (
             bytes32[] memory names,
             address[] memory addrs,
-            uint88[] memory variants
+            uint8[] memory variants
         )
     {
         Deal storage deal = _ilkToDeal[ilk];
@@ -431,7 +431,7 @@ contract RwaRegistry {
 
         names = deal._components.values();
         addrs = new address[](length);
-        variants = new uint88[](length);
+        variants = new uint8[](length);
 
         for (uint256 i = 0; i < names.length; i++) {
             Component storage component = deal._nameToComponent[names[i]];
@@ -442,6 +442,17 @@ contract RwaRegistry {
     }
 
     /**
+     * @notice Check a specific component from a deal identified by `ilk` exists.
+     * @dev Returns `false` if the deal or the component does not exist.
+     * @param ilk The ilk name.
+     * @param name The name of the component.
+     * @return Whether the component exists or not.
+     */
+    function hasComponent(bytes32 ilk, bytes32 name) external view returns (bool) {
+        return _ilkToDeal[ilk]._nameToComponent[name].exists;
+    }
+
+    /**
      * @notice Gets a specific component from a deal identified by `ilk`.
      * @dev It will revert if the deal or the component does not exist.
      * @param ilk The ilk name.
@@ -449,7 +460,7 @@ contract RwaRegistry {
      * @return addr The component address.
      * @return variant The component variant.
      */
-    function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint88 variant) {
+    function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint8 variant) {
         Deal storage deal = _ilkToDeal[ilk];
 
         if (deal.status == DealStatus.NONE) {
@@ -501,7 +512,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32[] calldata names,
         address[] calldata addrs,
-        uint88[] calldata variants
+        uint8[] calldata variants
     ) internal {
         if (!(names.length == addrs.length && names.length == variants.length)) {
             revert MismatchingComponentParams();
@@ -523,7 +534,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32 name,
         address addr,
-        uint88 variant
+        uint8 variant
     ) internal {
         if (!_supportedComponents.contains(name)) {
             revert UnsupportedComponent(name);

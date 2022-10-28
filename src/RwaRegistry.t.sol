@@ -113,7 +113,7 @@ contract RwaRegistryTest is Test {
         addrs[3] = inputConduit_;
         addrs[4] = jar_;
 
-        uint88[] memory variants = new uint88[](5);
+        uint8[] memory variants = new uint8[](5);
         variants[0] = 1;
         variants[1] = 1;
         variants[2] = 1;
@@ -131,7 +131,7 @@ contract RwaRegistryTest is Test {
         reg.add(ilk_, names, addrs, variants);
 
         (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
-        (bytes32[] memory actualNames, address[] memory actualAddrs, uint88[] memory actualVariants) = reg
+        (bytes32[] memory actualNames, address[] memory actualAddrs, uint8[] memory actualVariants) = reg
             .listComponentsOf(ilk_);
 
         assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
@@ -172,7 +172,7 @@ contract RwaRegistryTest is Test {
         addrs[0] = urn_;
         addrs[1] = someAddr_;
 
-        uint88[] memory variants = new uint88[](5);
+        uint8[] memory variants = new uint8[](5);
         variants[0] = 1;
         variants[1] = 1;
 
@@ -194,7 +194,7 @@ contract RwaRegistryTest is Test {
         address[] memory addrs = new address[](1);
         addrs[0] = urn_;
 
-        uint88[] memory variants = new uint88[](1);
+        uint8[] memory variants = new uint8[](1);
         variants[0] = 1;
 
         vm.expectRevert(abi.encodeWithSelector(RwaRegistry.InvalidComponentAddress.selector, ilk_, names[0]));
@@ -217,7 +217,7 @@ contract RwaRegistryTest is Test {
         addrs[0] = urn_;
         addrs[1] = liquidationOracle_;
 
-        uint88[] memory variants = new uint88[](2);
+        uint8[] memory variants = new uint8[](2);
         variants[0] = 1;
         variants[1] = 1;
 
@@ -241,11 +241,11 @@ contract RwaRegistryTest is Test {
 
         bytes32[] memory names;
         address[] memory addrs;
-        uint88[] memory variants;
+        uint8[] memory variants;
         reg.add(ilk_, names, addrs, variants);
 
         (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
-        (bytes32[] memory actualNames, address[] memory actualAddrs, uint88[] memory actualVariants) = reg
+        (bytes32[] memory actualNames, address[] memory actualAddrs, uint8[] memory actualVariants) = reg
             .listComponentsOf(ilk_);
 
         assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
@@ -265,7 +265,7 @@ contract RwaRegistryTest is Test {
 
         bytes32[] memory originalNames = new bytes32[](2);
         address[] memory originalAddrs = new address[](2);
-        uint88[] memory originalVariants = new uint88[](2);
+        uint8[] memory originalVariants = new uint8[](2);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -298,7 +298,7 @@ contract RwaRegistryTest is Test {
 
         (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
 
-        (bytes32[] memory names, address[] memory addrs, uint88[] memory variants) = reg.listComponentsOf(ilk_);
+        (bytes32[] memory names, address[] memory addrs, uint8[] memory variants) = reg.listComponentsOf(ilk_);
 
         assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
         assertEq(names.length, 0, "Name list is not empty");
@@ -498,17 +498,17 @@ contract RwaRegistryTest is Test {
     function testAddNewComponentToDeal() public {
         // bytes32 ilk_,
         // address urn_,
-        // uint88 variant_
+        // uint8 variant_
 
         bytes32 ilk_ = "RWA1337-A";
         address urn_ = address(0x3549);
-        uint88 variant_ = 0x2830;
+        uint8 variant_ = 0x2830;
         reg.add(ilk_);
 
         reg.setComponent(ilk_, "urn", urn_, variant_);
 
         assertTrue(reg.hasComponent(ilk_, "urn"));
-        (address addr, uint88 variant) = reg.getComponent(ilk_, "urn");
+        (address addr, uint8 variant) = reg.getComponent(ilk_, "urn");
         assertEq(addr, urn_, "Component address mismatch");
         assertEq(variant, variant_, "Component variant mismatch");
     }
@@ -516,37 +516,37 @@ contract RwaRegistryTest is Test {
     function testUpdateDealComponent() public {
         // bytes32 ilk_,
         // address urn_,
-        // uint88 variant_
+        // uint8 variant_
 
         bytes32 ilk_ = "RWA1337-A";
         address urn_ = address(0x3549);
 
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
-        uint88 variant_ = 0x2830;
+        uint8 variant_ = 0x2830;
         reg.setComponent(ilk_, "urn", urn_, variant_);
 
-        (, uint88 updatedVariant) = reg.getComponent(ilk_, "urn");
+        (, uint8 updatedVariant) = reg.getComponent(ilk_, "urn");
         assertEq(updatedVariant, variant_, "Component variant mismatch");
     }
 
     function testRemoveDealComponent() public {
         // bytes32 ilk_,
         // address urn_,
-        // uint88 variant_
+        // uint8 variant_
 
         bytes32 ilk_ = "RWA1337-A";
         address urn_ = address(0x3549);
 
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -563,13 +563,13 @@ contract RwaRegistryTest is Test {
     function testReverGetComponentForUnexistingDeal() public {
         // bytes32 ilk_,
         // address urn_,
-        // uint88 variant_
+        // uint8 variant_
 
         bytes32 ilk_ = "RWA1337-A";
         address urn_ = address(0x3549);
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -583,13 +583,13 @@ contract RwaRegistryTest is Test {
     function testRevertGetUnexistentComponentForExistingDeal() public {
         // bytes32 ilk_,
         // address urn_,
-        // uint88 variant_
+        // uint8 variant_
 
         bytes32 ilk_ = "RWA1337-A";
         address urn_ = address(0x3549);
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -615,7 +615,7 @@ contract RwaRegistryTest is Test {
         address urn_ = address(0x3549);
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -634,7 +634,7 @@ contract RwaRegistryTest is Test {
         address urn_ = address(0x3549);
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -657,7 +657,7 @@ contract RwaRegistryTest is Test {
         address urn_ = address(0x3549);
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -675,7 +675,7 @@ contract RwaRegistryTest is Test {
         address urn_ = address(0x3549);
         bytes32[] memory originalNames = new bytes32[](1);
         address[] memory originalAddrs = new address[](1);
-        uint88[] memory originalVariants = new uint88[](1);
+        uint8[] memory originalVariants = new uint8[](1);
         originalNames[0] = "urn";
         originalAddrs[0] = urn_;
         originalVariants[0] = 1;
@@ -688,7 +688,7 @@ contract RwaRegistryTest is Test {
 
     event Rely(address indexed usr);
     event Deny(address indexed usr);
-    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint88 variant);
+    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint8 variant);
     event AddDeal(bytes32 indexed ilk);
     event FinalizeDeal(bytes32 indexed ilk);
     event AddSupportedComponent(bytes32 indexed component);

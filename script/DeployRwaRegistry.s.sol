@@ -16,81 +16,81 @@ import {RwaTokenFactoryAbstract} from "dss-interfaces/dss/mip21/RwaTokenFactoryA
 import {RwaRegistry} from "../src/RwaRegistry.sol";
 
 contract DeployRwaRegistry is Script {
-  ChainlogAbstract internal chainlog;
-  address internal mcdPauseProxy;
-  address internal rwaLiquidationOracle;
+    ChainlogAbstract internal chainlog;
+    address internal mcdPauseProxy;
+    address internal rwaLiquidationOracle;
 
-  RwaRegistry internal reg;
+    RwaRegistry internal reg;
 
-  constructor() {
-    chainlog = ChainlogAbstract(vm.envAddress("CHANGELOG"));
-    mcdPauseProxy = chainlog.getAddress("MCD_PAUSE_PROXY");
-    rwaLiquidationOracle = chainlog.getAddress("MIP21_LIQUIDATION_ORACLE");
-  }
+    constructor() {
+        chainlog = ChainlogAbstract(vm.envAddress("CHANGELOG"));
+        mcdPauseProxy = chainlog.getAddress("MCD_PAUSE_PROXY");
+        rwaLiquidationOracle = chainlog.getAddress("MIP21_LIQUIDATION_ORACLE");
+    }
 
-  function run() external returns (address) {
-    vm.startBroadcast();
+    function run() external returns (address) {
+        vm.startBroadcast();
 
-    reg = new RwaRegistry();
+        reg = new RwaRegistry();
 
-    _addRWA008A();
-    _addRWA009A();
+        _addRWA008A();
+        _addRWA009A();
 
-    reg.rely(mcdPauseProxy);
-    reg.deny(msg.sender);
+        reg.rely(mcdPauseProxy);
+        reg.deny(msg.sender);
 
-    vm.stopBroadcast();
+        vm.stopBroadcast();
 
-    return address(reg);
-  }
+        return address(reg);
+    }
 
-  function _addRWA008A() internal {
-    bytes32[] memory names = new bytes32[](4);
-    names[0] = URN;
-    names[1] = OUTPUT_CONDUIT;
-    names[2] = INPUT_CONDUIT;
-    names[3] = LIQUIDATION_ORACLE;
+    function _addRWA008A() internal {
+        bytes32[] memory names = new bytes32[](4);
+        names[0] = URN;
+        names[1] = OUTPUT_CONDUIT;
+        names[2] = INPUT_CONDUIT;
+        names[3] = LIQUIDATION_ORACLE;
 
-    address[] memory addrs = new address[](4);
-    addrs[0] = chainlog.getAddress("RWA008_A_URN");
-    addrs[1] = chainlog.getAddress("RWA008_A_OUTPUT_CONDUIT");
-    addrs[2] = chainlog.getAddress("RWA008_A_INPUT_CONDUIT");
-    addrs[3] = rwaLiquidationOracle;
+        address[] memory addrs = new address[](4);
+        addrs[0] = chainlog.getAddress("RWA008_A_URN");
+        addrs[1] = chainlog.getAddress("RWA008_A_OUTPUT_CONDUIT");
+        addrs[2] = chainlog.getAddress("RWA008_A_INPUT_CONDUIT");
+        addrs[3] = rwaLiquidationOracle;
 
-    uint88[] memory variants = new uint88[](4);
-    variants[0] = 2; // RwaUrn2
-    variants[1] = 2; // RwaOutputConduit2
-    variants[2] = 2; // RwaInputConduit2
-    variants[3] = 1; // RwaLiquidationOracle
+        uint8[] memory variants = new uint8[](4);
+        variants[0] = 2; // RwaUrn2
+        variants[1] = 2; // RwaOutputConduit2
+        variants[2] = 2; // RwaInputConduit2
+        variants[3] = 1; // RwaLiquidationOracle
 
-    reg.add("RWA008-A", names, addrs, variants);
-  }
+        reg.add("RWA008-A", names, addrs, variants);
+    }
 
-  function _addRWA009A() internal {
-    bytes32[] memory names = new bytes32[](4);
-    names[0] = URN;
-    names[1] = JAR;
-    names[2] = OUTPUT_CONDUIT;
-    names[3] = LIQUIDATION_ORACLE;
+    function _addRWA009A() internal {
+        bytes32[] memory names = new bytes32[](4);
+        names[0] = URN;
+        names[1] = JAR;
+        names[2] = OUTPUT_CONDUIT;
+        names[3] = LIQUIDATION_ORACLE;
 
-    address[] memory addrs = new address[](4);
-    addrs[0] = chainlog.getAddress("RWA009_A_URN");
-    addrs[1] = chainlog.getAddress("RWA009_A_JAR");
-    addrs[2] = chainlog.getAddress("RWA009_A_OUTPUT_CONDUIT");
-    addrs[3] = rwaLiquidationOracle;
+        address[] memory addrs = new address[](4);
+        addrs[0] = chainlog.getAddress("RWA009_A_URN");
+        addrs[1] = chainlog.getAddress("RWA009_A_JAR");
+        addrs[2] = chainlog.getAddress("RWA009_A_OUTPUT_CONDUIT");
+        addrs[3] = rwaLiquidationOracle;
 
-    uint88[] memory variants = new uint88[](4);
-    variants[0] = 2; // RwaUrn2
-    variants[1] = 1; // RwaJar
-    variants[2] = type(uint88).max; // Regular address
-    variants[3] = 1; // RwaLiquidationOracle
+        uint8[] memory variants = new uint8[](4);
+        variants[0] = 2; // RwaUrn2
+        variants[1] = 1; // RwaJar
+        variants[2] = type(uint8).max; // Regular address
+        variants[3] = 1; // RwaLiquidationOracle
 
-    reg.add("RWA009-A", names, addrs, variants);
-  }
+        reg.add("RWA009-A", names, addrs, variants);
+    }
 
-  bytes32 internal constant URN = "urn";
-  bytes32 internal constant JAR = "jar";
-  bytes32 internal constant OUTPUT_CONDUIT = "outputConduit";
-  bytes32 internal constant INPUT_CONDUIT = "inputConduit";
-  bytes32 internal constant LIQUIDATION_ORACLE = "liquidationOracle";
+    bytes32 internal constant URN = "urn";
+    bytes32 internal constant JAR = "jar";
+    bytes32 internal constant OUTPUT_CONDUIT = "outputConduit";
+    bytes32 internal constant INPUT_CONDUIT = "inputConduit";
+    bytes32 internal constant LIQUIDATION_ORACLE = "liquidationOracle";
 }

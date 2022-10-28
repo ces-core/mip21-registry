@@ -7,691 +7,689 @@ import "forge-std/Test.sol";
 import {RwaRegistry} from "./RwaRegistry.sol";
 
 contract RwaRegistryTest is Test {
-  RwaRegistry internal reg;
+    RwaRegistry internal reg;
 
-  function setUp() public {
-    reg = new RwaRegistry();
-  }
+    function setUp() public {
+        reg = new RwaRegistry();
+    }
 
-  /*//////////////////////////////////
+    /*//////////////////////////////////
               Authorization
   //////////////////////////////////*/
 
-  function testRely() public {
-    vm.expectEmit(true, false, false, false);
-    emit Rely(address(0x1337));
+    function testRely() public {
+        vm.expectEmit(true, false, false, false);
+        emit Rely(address(0x1337));
 
-    reg.rely(address(0x1337));
+        reg.rely(address(0x1337));
 
-    assertEq(reg.wards(address(0x1337)), 1);
-  }
+        assertEq(reg.wards(address(0x1337)), 1);
+    }
 
-  function testDeny() public {
-    vm.expectEmit(true, false, false, false);
-    emit Deny(address(this));
+    function testDeny() public {
+        vm.expectEmit(true, false, false, false);
+        emit Deny(address(this));
 
-    reg.deny(address(this));
+        reg.deny(address(this));
 
-    assertEq(reg.wards(address(this)), 0);
-  }
+        assertEq(reg.wards(address(this)), 0);
+    }
 
-  /*//////////////////////////////////
+    /*//////////////////////////////////
      Supported Components Management
   //////////////////////////////////*/
 
-  function testAddDefaultSupportedComponentsDuringDeployment() public {
-    assertEq(reg.listSupportedComponents().length, 5);
-    assertEq(reg.isSupportedComponent("urn"), true);
-    assertEq(reg.isSupportedComponent("liquidationOracle"), true);
-    assertEq(reg.isSupportedComponent("outputConduit"), true);
-    assertEq(reg.isSupportedComponent("inputConduit"), true);
-    assertEq(reg.isSupportedComponent("jar"), true);
-  }
+    function testAddDefaultSupportedComponentsDuringDeployment() public {
+        assertEq(reg.listSupportedComponents().length, 5);
+        assertEq(reg.isSupportedComponent("urn"), true);
+        assertEq(reg.isSupportedComponent("liquidationOracle"), true);
+        assertEq(reg.isSupportedComponent("outputConduit"), true);
+        assertEq(reg.isSupportedComponent("inputConduit"), true);
+        assertEq(reg.isSupportedComponent("jar"), true);
+    }
 
-  function testAddSupportedComponent() public {
-    vm.expectEmit(true, false, false, false);
-    emit AddSupportedComponent("somethingElse");
+    function testAddSupportedComponent() public {
+        vm.expectEmit(true, false, false, false);
+        emit AddSupportedComponent("somethingElse");
 
-    reg.addSupportedComponent("somethingElse");
+        reg.addSupportedComponent("somethingElse");
 
-    assertEq(reg.isSupportedComponent("somethingElse"), true);
-  }
+        assertEq(reg.isSupportedComponent("somethingElse"), true);
+    }
 
-  function testRevertAddExistingSupportedComponent() public {
-    // bytes32 componentName_
+    function testRevertAddExistingSupportedComponent() public {
+        // bytes32 componentName_
 
-    bytes32 componentName_ = "anything";
-    reg.addSupportedComponent(componentName_);
+        bytes32 componentName_ = "anything";
+        reg.addSupportedComponent(componentName_);
 
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentAlreadySupported.selector, componentName_));
-    reg.addSupportedComponent(componentName_);
-  }
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentAlreadySupported.selector, componentName_));
+        reg.addSupportedComponent(componentName_);
+    }
 
-  function testRevertUnautorizedAddSupportedComponent() public {
-    // address sender_
-    // if (sender_ == address(this)) {
-    //   return;
-    // }
-    address sender_ = address(0x1337);
+    function testRevertUnautorizedAddSupportedComponent() public {
+        // address sender_
+        // if (sender_ == address(this)) {
+        //   return;
+        // }
+        address sender_ = address(0x1337);
 
-    vm.expectRevert(RwaRegistry.Unauthorized.selector);
-    vm.prank(sender_);
+        vm.expectRevert(RwaRegistry.Unauthorized.selector);
+        vm.prank(sender_);
 
-    reg.addSupportedComponent("anything");
-  }
+        reg.addSupportedComponent("anything");
+    }
 
-  /*//////////////////////////////////
+    /*//////////////////////////////////
      Deals & Components Management
   //////////////////////////////////*/
 
-  function testAddDealAndComponents() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // address liquidationOracle_,
-    // address outputConduit_,
-    // address inputConduit_,
-    // address jar_
+    function testAddDealAndComponents() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // address liquidationOracle_,
+        // address outputConduit_,
+        // address inputConduit_,
+        // address jar_
 
-    bytes32 ilk_ = "RWA1337-a";
-    address urn_ = address(0x2448);
-    address liquidationOracle_ = address(0x3559);
-    address outputConduit_ = address(0x466a);
-    address inputConduit_ = address(0x577b);
-    address jar_ = address(0x688c);
+        bytes32 ilk_ = "RWA1337-a";
+        address urn_ = address(0x2448);
+        address liquidationOracle_ = address(0x3559);
+        address outputConduit_ = address(0x466a);
+        address inputConduit_ = address(0x577b);
+        address jar_ = address(0x688c);
 
-    bytes32[] memory names = new bytes32[](5);
-    names[0] = "urn";
-    names[1] = "liquidationOracle";
-    names[2] = "outputConduit";
-    names[3] = "inputConduit";
-    names[4] = "jar";
+        bytes32[] memory names = new bytes32[](5);
+        names[0] = "urn";
+        names[1] = "liquidationOracle";
+        names[2] = "outputConduit";
+        names[3] = "inputConduit";
+        names[4] = "jar";
 
-    address[] memory addrs = new address[](5);
-    addrs[0] = urn_;
-    addrs[1] = liquidationOracle_;
-    addrs[2] = outputConduit_;
-    addrs[3] = inputConduit_;
-    addrs[4] = jar_;
+        address[] memory addrs = new address[](5);
+        addrs[0] = urn_;
+        addrs[1] = liquidationOracle_;
+        addrs[2] = outputConduit_;
+        addrs[3] = inputConduit_;
+        addrs[4] = jar_;
 
-    uint88[] memory variants = new uint88[](5);
-    variants[0] = 1;
-    variants[1] = 1;
-    variants[2] = 1;
-    variants[3] = 1;
-    variants[4] = 1;
+        uint88[] memory variants = new uint88[](5);
+        variants[0] = 1;
+        variants[1] = 1;
+        variants[2] = 1;
+        variants[3] = 1;
+        variants[4] = 1;
 
-    vm.expectEmit(true, false, false, false);
-    emit AddDeal(ilk_);
+        vm.expectEmit(true, false, false, false);
+        emit AddDeal(ilk_);
 
-    for (uint256 i = 0; i < names.length; i++) {
-      vm.expectEmit(true, true, true, true);
-      emit SetComponent(ilk_, names[i], addrs[i], variants[i]);
+        for (uint256 i = 0; i < names.length; i++) {
+            vm.expectEmit(true, true, true, true);
+            emit SetComponent(ilk_, names[i], addrs[i], variants[i]);
+        }
+
+        reg.add(ilk_, names, addrs, variants);
+
+        (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
+        (bytes32[] memory actualNames, address[] memory actualAddrs, uint88[] memory actualVariants) = reg
+            .listComponentsOf(ilk_);
+
+        assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
+
+        assertEq(actualNames[0], names[0], "Component mismatch: urn");
+        assertEq(actualNames[1], names[1], "Component mismatch: liquidationOracle");
+        assertEq(actualNames[2], names[2], "Component mismatch: outputConduit");
+        assertEq(actualNames[3], names[3], "Component mismatch: inputConduit");
+        assertEq(actualNames[4], names[4], "Component mismatch: jar");
+
+        assertEq(actualAddrs[0], addrs[0], "Component address mismatch: urn");
+        assertEq(actualAddrs[1], addrs[1], "Component address mismatch: liquidationOracle");
+        assertEq(actualAddrs[2], addrs[2], "Component address mismatch: outputConduit");
+        assertEq(actualAddrs[3], addrs[3], "Component address mismatch: inputConduit");
+        assertEq(actualAddrs[4], addrs[4], "Component address mismatch: jar");
+
+        assertEq(actualVariants[0], variants[0], "Component variant mismatch: urn");
+        assertEq(actualVariants[1], variants[1], "Component variant mismatch: liquidationOracle");
+        assertEq(actualVariants[2], variants[2], "Component variant mismatch: outputConduit");
+        assertEq(actualVariants[3], variants[3], "Component variant mismatch: inputConduit");
+        assertEq(actualVariants[4], variants[4], "Component variant mismatch: jar");
     }
 
-    reg.add(ilk_, names, addrs, variants);
+    function testRevertAddDealWithUnsupportedComponent() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // address someAddr,
 
-    (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
-    (bytes32[] memory actualNames, address[] memory actualAddrs, uint88[] memory actualVariants) = reg.listComponentsOf(
-      ilk_
-    );
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x1337);
+        address someAddr_ = address(0x2448);
 
-    assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
+        bytes32[] memory names = new bytes32[](5);
+        names[0] = "urn";
+        names[1] = "something";
 
-    assertEq(actualNames[0], names[0], "Component mismatch: urn");
-    assertEq(actualNames[1], names[1], "Component mismatch: liquidationOracle");
-    assertEq(actualNames[2], names[2], "Component mismatch: outputConduit");
-    assertEq(actualNames[3], names[3], "Component mismatch: inputConduit");
-    assertEq(actualNames[4], names[4], "Component mismatch: jar");
+        address[] memory addrs = new address[](5);
+        addrs[0] = urn_;
+        addrs[1] = someAddr_;
 
-    assertEq(actualAddrs[0], addrs[0], "Component address mismatch: urn");
-    assertEq(actualAddrs[1], addrs[1], "Component address mismatch: liquidationOracle");
-    assertEq(actualAddrs[2], addrs[2], "Component address mismatch: outputConduit");
-    assertEq(actualAddrs[3], addrs[3], "Component address mismatch: inputConduit");
-    assertEq(actualAddrs[4], addrs[4], "Component address mismatch: jar");
+        uint88[] memory variants = new uint88[](5);
+        variants[0] = 1;
+        variants[1] = 1;
 
-    assertEq(actualVariants[0], variants[0], "Component variant mismatch: urn");
-    assertEq(actualVariants[1], variants[1], "Component variant mismatch: liquidationOracle");
-    assertEq(actualVariants[2], variants[2], "Component variant mismatch: outputConduit");
-    assertEq(actualVariants[3], variants[3], "Component variant mismatch: inputConduit");
-    assertEq(actualVariants[4], variants[4], "Component variant mismatch: jar");
-  }
-
-  function testRevertAddDealWithUnsupportedComponent() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // address someAddr,
-
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x1337);
-    address someAddr_ = address(0x2448);
-
-    bytes32[] memory names = new bytes32[](5);
-    names[0] = "urn";
-    names[1] = "something";
-
-    address[] memory addrs = new address[](5);
-    addrs[0] = urn_;
-    addrs[1] = someAddr_;
-
-    uint88[] memory variants = new uint88[](5);
-    variants[0] = 1;
-    variants[1] = 1;
-
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.UnsupportedComponent.selector, names[1]));
-    reg.add(ilk_, names, addrs, variants);
-  }
-
-  function testRevertAddDealWithComponentWithInvalidAddress() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // address someAddr,
-
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0);
-
-    bytes32[] memory names = new bytes32[](1);
-    names[0] = "urn";
-
-    address[] memory addrs = new address[](1);
-    addrs[0] = urn_;
-
-    uint88[] memory variants = new uint88[](1);
-    variants[0] = 1;
-
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.InvalidComponentAddress.selector, ilk_, names[0]));
-    reg.add(ilk_, names, addrs, variants);
-  }
-
-  function testRevertAddDealWithComponentsWithMismatchingParams() public {
-    // bytes32 ilk_,
-    // address urn_
-    // address liquidationOracle_,
-
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x1337);
-    address liquidationOracle_ = address(0x2448);
-
-    bytes32[] memory names = new bytes32[](1);
-    names[0] = "urn";
-
-    address[] memory addrs = new address[](2);
-    addrs[0] = urn_;
-    addrs[1] = liquidationOracle_;
-
-    uint88[] memory variants = new uint88[](2);
-    variants[0] = 1;
-    variants[1] = 1;
-
-    vm.expectRevert(RwaRegistry.MismatchingComponentParams.selector);
-    reg.add(ilk_, names, addrs, variants);
-  }
-
-  function testRevertListComponentsOfUnexistingDeal() public {
-    // bytes32 ilk_
-
-    bytes32 ilk_ = "RWA1337-A";
-
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
-    reg.listComponentsOf(ilk_);
-  }
-
-  function testAddDealWithEmptyComponentList() public {
-    // bytes32 ilk_
-
-    bytes32 ilk_ = "RWA1337-A";
-
-    bytes32[] memory names;
-    address[] memory addrs;
-    uint88[] memory variants;
-    reg.add(ilk_, names, addrs, variants);
-
-    (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
-    (bytes32[] memory actualNames, address[] memory actualAddrs, uint88[] memory actualVariants) = reg.listComponentsOf(
-      ilk_
-    );
-
-    assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
-    assertEq(actualNames.length, 0, "Name list is not empty");
-    assertEq(actualAddrs.length, 0, "Address list is not empty");
-    assertEq(actualVariants.length, 0, "Variant list is not empty");
-  }
-
-  function testListAllDealComponentNames() public {
-    // bytes32 ilk_,
-    // addrres urn_,
-    // addrres liquidationOracle_
-
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x1337);
-    address liquidationOracle_ = address(0x2448);
-
-    bytes32[] memory originalNames = new bytes32[](2);
-    address[] memory originalAddrs = new address[](2);
-    uint88[] memory originalVariants = new uint88[](2);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    originalNames[1] = "liquidationOracle";
-    originalAddrs[1] = liquidationOracle_;
-    originalVariants[1] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
-
-    bytes32[] memory actualNames = reg.listComponentNamesOf(ilk_);
-
-    assertEq(actualNames[0], originalNames[0]);
-    assertEq(actualNames[1], originalNames[1]);
-  }
-
-  function testRevertListComponentNamesOfUnexistingDeal() public {
-    // bytes32 ilk_
-
-    bytes32 ilk_ = "RWA1337-A";
-
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
-    reg.listComponentNamesOf(ilk_);
-  }
-
-  function testAddDealWithNoComponents() public {
-    // bytes32 ilk_
-
-    bytes32 ilk_ = "RWA1337-A";
-
-    reg.add(ilk_);
-
-    (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
-
-    (bytes32[] memory names, address[] memory addrs, uint88[] memory variants) = reg.listComponentsOf(ilk_);
-
-    assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
-    assertEq(names.length, 0, "Name list is not empty");
-    assertEq(addrs.length, 0, "Address list is not empty");
-    assertEq(variants.length, 0, "Variant list is not empty");
-  }
-
-  function testRevertAddExistingDeal() public {
-    // bytes32 ilk_,
-
-    bytes32 ilk_ = "RWA1337-A";
-    reg.add(ilk_);
-
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealAlreadyExists.selector, ilk_));
-    reg.add(ilk_);
-  }
-
-  function testRevertUnautorizedAddDeal() public {
-    // address sender_,
-    // bytes32 ilk_,
-
-    // if (sender_ == address(this)) {
-    //   return;
-    // }
-
-    address sender_ = address(0x1337);
-    bytes32 ilk_ = "RWA1337-A";
-
-    vm.expectRevert(RwaRegistry.Unauthorized.selector);
-    vm.prank(sender_);
-
-    reg.add(ilk_);
-  }
-
-  function testListAllDealIlks() public {
-    // bytes32 ilk0_, bytes32 ilk1_
-    // vm.assume(ilk0_ != ilk1_);
-
-    bytes32 ilk0_ = "RWA1337-A";
-    bytes32 ilk1_ = "RWA2448-A";
-
-    reg.add(ilk0_);
-    reg.add(ilk1_);
-
-    bytes32[] memory actualIlks = reg.list();
-
-    assertEq(actualIlks[0], ilk0_);
-    assertEq(actualIlks[1], ilk1_);
-  }
-
-  function testCountAllDealIlks() public {
-    // bytes32[] memory ilks_
-    // if (ilks_.length == 0) {
-    //   return;
-    // }
-
-    bytes32[] memory ilks_ = new bytes32[](3);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
-
-    uint256 duplicates = 0;
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      try reg.add(ilks_[i]) {} catch {
-        duplicates++;
-      }
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.UnsupportedComponent.selector, names[1]));
+        reg.add(ilk_, names, addrs, variants);
     }
 
-    uint256 count = reg.count();
+    function testRevertAddDealWithComponentWithInvalidAddress() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // address someAddr,
 
-    uint256 expected = ilks_.length - duplicates;
-    assertEq(count, expected, "Wrong count");
-  }
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0);
 
-  function testSetPosToIlkReverseMapping() public {
-    // bytes32[] memory ilks_
-    // if (ilks_.length == 0) {
-    //   return;
-    // }
+        bytes32[] memory names = new bytes32[](1);
+        names[0] = "urn";
 
-    bytes32[] memory ilks_ = new bytes32[](3);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
+        address[] memory addrs = new address[](1);
+        addrs[0] = urn_;
 
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      reg.add(ilks_[i]);
+        uint88[] memory variants = new uint88[](1);
+        variants[0] = 1;
+
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.InvalidComponentAddress.selector, ilk_, names[0]));
+        reg.add(ilk_, names, addrs, variants);
     }
 
-    assertEq(reg.posToIlk(0), ilks_[0], "Invalid ilk pos: 0");
-    assertEq(reg.posToIlk(1), ilks_[1], "Invalid ilk pos: 1");
-    assertEq(reg.posToIlk(2), ilks_[2], "Invalid ilk pos: 2");
-  }
+    function testRevertAddDealWithComponentsWithMismatchingParams() public {
+        // bytes32 ilk_,
+        // address urn_
+        // address liquidationOracle_,
 
-  function testIterDealIlksWithinBounds() public {
-    // bytes32 ilk0_, bytes32 ilk1_
-    // vm.assume(ilk0_ != ilk1_);
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x1337);
+        address liquidationOracle_ = address(0x2448);
 
-    bytes32[] memory ilks_ = new bytes32[](4);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
-    ilks_[3] = "RWA4660-A";
+        bytes32[] memory names = new bytes32[](1);
+        names[0] = "urn";
 
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      reg.add(ilks_[i]);
+        address[] memory addrs = new address[](2);
+        addrs[0] = urn_;
+        addrs[1] = liquidationOracle_;
+
+        uint88[] memory variants = new uint88[](2);
+        variants[0] = 1;
+        variants[1] = 1;
+
+        vm.expectRevert(RwaRegistry.MismatchingComponentParams.selector);
+        reg.add(ilk_, names, addrs, variants);
     }
 
-    bytes32[] memory actualIlks = reg.iter(1, 3);
+    function testRevertListComponentsOfUnexistingDeal() public {
+        // bytes32 ilk_
 
-    assertEq(actualIlks.length, 2, "Wrong count");
-    assertEq(actualIlks[0], ilks_[1], "Wrong element at pos: 0");
-    assertEq(actualIlks[1], ilks_[2], "Wrong element at pos: 1");
-  }
+        bytes32 ilk_ = "RWA1337-A";
 
-  function testIterDealIlksEndOutOfBounds() public {
-    // bytes32 ilk0_, bytes32 ilk1_
-    // vm.assume(ilk0_ != ilk1_);
-
-    bytes32[] memory ilks_ = new bytes32[](4);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
-    ilks_[3] = "RWA4660-A";
-
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      reg.add(ilks_[i]);
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
+        reg.listComponentsOf(ilk_);
     }
 
-    bytes32[] memory actualIlks = reg.iter(1, 10);
+    function testAddDealWithEmptyComponentList() public {
+        // bytes32 ilk_
 
-    // We are starting form index 1, so there will be only 3 elements in the array
-    assertEq(actualIlks.length, 3, "Wrong count");
-    assertEq(actualIlks[0], ilks_[1], "Wrong element at pos: 0");
-    assertEq(actualIlks[1], ilks_[2], "Wrong element at pos: 1");
-    assertEq(actualIlks[2], ilks_[3], "Wrong element at pos: 2");
-  }
+        bytes32 ilk_ = "RWA1337-A";
 
-  function testIterDealIlksFromZeroToLargeNumberIsEquivalentToList() public {
-    // bytes32 ilk0_, bytes32 ilk1_
-    // vm.assume(ilk0_ != ilk1_);
+        bytes32[] memory names;
+        address[] memory addrs;
+        uint88[] memory variants;
+        reg.add(ilk_, names, addrs, variants);
 
-    bytes32[] memory ilks_ = new bytes32[](4);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
-    ilks_[3] = "RWA4660-A";
+        (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
+        (bytes32[] memory actualNames, address[] memory actualAddrs, uint88[] memory actualVariants) = reg
+            .listComponentsOf(ilk_);
 
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      reg.add(ilks_[i]);
+        assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
+        assertEq(actualNames.length, 0, "Name list is not empty");
+        assertEq(actualAddrs.length, 0, "Address list is not empty");
+        assertEq(actualVariants.length, 0, "Variant list is not empty");
     }
 
-    bytes32[] memory iterIlks = reg.iter(0, 10);
-    bytes32[] memory listIlks = reg.list();
+    function testListAllDealComponentNames() public {
+        // bytes32 ilk_,
+        // addrres urn_,
+        // addrres liquidationOracle_
 
-    assertEq(abi.encodePacked(iterIlks), abi.encodePacked(listIlks), "Lists are not equal");
-  }
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x1337);
+        address liquidationOracle_ = address(0x2448);
 
-  function testIterDealIlksEmptyIterationParams() public {
-    // bytes32 ilk0_, bytes32 ilk1_
-    // vm.assume(ilk0_ != ilk1_);
+        bytes32[] memory originalNames = new bytes32[](2);
+        address[] memory originalAddrs = new address[](2);
+        uint88[] memory originalVariants = new uint88[](2);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        originalNames[1] = "liquidationOracle";
+        originalAddrs[1] = liquidationOracle_;
+        originalVariants[1] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
-    bytes32[] memory ilks_ = new bytes32[](4);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
-    ilks_[3] = "RWA4660-A";
+        bytes32[] memory actualNames = reg.listComponentNamesOf(ilk_);
 
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      reg.add(ilks_[i]);
+        assertEq(actualNames[0], originalNames[0]);
+        assertEq(actualNames[1], originalNames[1]);
     }
 
-    bytes32[] memory iterIlks = reg.iter(0, 0);
+    function testRevertListComponentNamesOfUnexistingDeal() public {
+        // bytes32 ilk_
 
-    assertEq(iterIlks.length, 0, "Should return an empty list");
-  }
+        bytes32 ilk_ = "RWA1337-A";
 
-  function testReverIterDealIlksInvalidIterationParams() public {
-    // bytes32 ilk0_, bytes32 ilk1_
-    // vm.assume(ilk0_ != ilk1_);
-
-    bytes32[] memory ilks_ = new bytes32[](4);
-    ilks_[0] = "RWA1337-A";
-    ilks_[1] = "RWA2448-A";
-    ilks_[2] = "RWA3559-A";
-    ilks_[3] = "RWA4660-A";
-
-    for (uint256 i = 0; i < ilks_.length; i++) {
-      reg.add(ilks_[i]);
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
+        reg.listComponentNamesOf(ilk_);
     }
 
-    vm.expectRevert(RwaRegistry.InvalidIteration.selector);
+    function testAddDealWithNoComponents() public {
+        // bytes32 ilk_
 
-    reg.iter(10, 0);
-  }
+        bytes32 ilk_ = "RWA1337-A";
 
-  function testAddNewComponentToDeal() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // uint88 variant_
+        reg.add(ilk_);
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    uint88 variant_ = 0x2830;
-    reg.add(ilk_);
+        (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
 
-    reg.setComponent(ilk_, "urn", urn_, variant_);
+        (bytes32[] memory names, address[] memory addrs, uint88[] memory variants) = reg.listComponentsOf(ilk_);
 
-    assertTrue(reg.hasComponent(ilk_, "urn"));
-    (address addr, uint88 variant) = reg.getComponent(ilk_, "urn");
-    assertEq(addr, urn_, "Component address mismatch");
-    assertEq(variant, variant_, "Component variant mismatch");
-  }
+        assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
+        assertEq(names.length, 0, "Name list is not empty");
+        assertEq(addrs.length, 0, "Address list is not empty");
+        assertEq(variants.length, 0, "Variant list is not empty");
+    }
 
-  function testUpdateDealComponent() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // uint88 variant_
+    function testRevertAddExistingDeal() public {
+        // bytes32 ilk_,
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
+        bytes32 ilk_ = "RWA1337-A";
+        reg.add(ilk_);
 
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealAlreadyExists.selector, ilk_));
+        reg.add(ilk_);
+    }
 
-    uint88 variant_ = 0x2830;
-    reg.setComponent(ilk_, "urn", urn_, variant_);
+    function testRevertUnautorizedAddDeal() public {
+        // address sender_,
+        // bytes32 ilk_,
 
-    (, uint88 updatedVariant) = reg.getComponent(ilk_, "urn");
-    assertEq(updatedVariant, variant_, "Component variant mismatch");
-  }
+        // if (sender_ == address(this)) {
+        //   return;
+        // }
 
-  function testRemoveDealComponent() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // uint88 variant_
+        address sender_ = address(0x1337);
+        bytes32 ilk_ = "RWA1337-A";
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
+        vm.expectRevert(RwaRegistry.Unauthorized.selector);
+        vm.prank(sender_);
 
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        reg.add(ilk_);
+    }
 
-    reg.removeComponent(ilk_, "urn");
+    function testListAllDealIlks() public {
+        // bytes32 ilk0_, bytes32 ilk1_
+        // vm.assume(ilk0_ != ilk1_);
 
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("urn")));
-    reg.getComponent(ilk_, "urn");
+        bytes32 ilk0_ = "RWA1337-A";
+        bytes32 ilk1_ = "RWA2448-A";
 
-    assertEq(reg.listComponentNamesOf(ilk_).length, 0);
-  }
+        reg.add(ilk0_);
+        reg.add(ilk1_);
 
-  function testReverGetComponentForUnexistingDeal() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // uint88 variant_
+        bytes32[] memory actualIlks = reg.list();
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        assertEq(actualIlks[0], ilk0_);
+        assertEq(actualIlks[1], ilk1_);
+    }
 
-    bytes32 wrongIlk = "RWA2448-A";
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, wrongIlk));
-    reg.getComponent(wrongIlk, "urn");
-  }
+    function testCountAllDealIlks() public {
+        // bytes32[] memory ilks_
+        // if (ilks_.length == 0) {
+        //   return;
+        // }
 
-  function testRevertGetUnexistentComponentForExistingDeal() public {
-    // bytes32 ilk_,
-    // address urn_,
-    // uint88 variant_
+        bytes32[] memory ilks_ = new bytes32[](3);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        uint256 duplicates = 0;
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            try reg.add(ilks_[i]) {} catch {
+                duplicates++;
+            }
+        }
 
-    vm.expectRevert(
-      abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("liquidationOracle"))
-    );
-    reg.getComponent(ilk_, "liquidationOracle");
-  }
+        uint256 count = reg.count();
 
-  function testRevertUnautorizedUpdateDeal() public {
-    // address sender_,
-    // bytes32 ilk_,
-    // address urn_
+        uint256 expected = ilks_.length - duplicates;
+        assertEq(count, expected, "Wrong count");
+    }
 
-    // if (sender_ == address(this)) {
-    //   return;
-    // }
+    function testSetPosToIlkReverseMapping() public {
+        // bytes32[] memory ilks_
+        // if (ilks_.length == 0) {
+        //   return;
+        // }
 
-    address sender_ = address(0x1337);
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        bytes32[] memory ilks_ = new bytes32[](3);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
 
-    vm.expectRevert(RwaRegistry.Unauthorized.selector);
-    vm.prank(sender_);
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            reg.add(ilks_[i]);
+        }
 
-    reg.setComponent(ilk_, "urn", address(0x1337), 1337);
-  }
+        assertEq(reg.posToIlk(0), ilks_[0], "Invalid ilk pos: 0");
+        assertEq(reg.posToIlk(1), ilks_[1], "Invalid ilk pos: 1");
+        assertEq(reg.posToIlk(2), ilks_[2], "Invalid ilk pos: 2");
+    }
 
-  function testFinalizeComponent() public {
-    // bytes32 ilk_
+    function testIterDealIlksWithinBounds() public {
+        // bytes32 ilk0_, bytes32 ilk1_
+        // vm.assume(ilk0_ != ilk1_);
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        bytes32[] memory ilks_ = new bytes32[](4);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
+        ilks_[3] = "RWA4660-A";
 
-    vm.expectEmit(true, false, false, false);
-    emit FinalizeDeal(ilk_);
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            reg.add(ilks_[i]);
+        }
 
-    reg.finalize(ilk_);
+        bytes32[] memory actualIlks = reg.iter(1, 3);
 
-    (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
+        assertEq(actualIlks.length, 2, "Wrong count");
+        assertEq(actualIlks[0], ilks_[1], "Wrong element at pos: 0");
+        assertEq(actualIlks[1], ilks_[2], "Wrong element at pos: 1");
+    }
 
-    assertEq(uint256(status), uint256(RwaRegistry.DealStatus.FINALIZED));
-  }
+    function testIterDealIlksEndOutOfBounds() public {
+        // bytes32 ilk0_, bytes32 ilk1_
+        // vm.assume(ilk0_ != ilk1_);
 
-  function testRevertFinalizeUnexistingComponent() public {
-    // bytes32 ilk_
+        bytes32[] memory ilks_ = new bytes32[](4);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
+        ilks_[3] = "RWA4660-A";
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            reg.add(ilks_[i]);
+        }
 
-    bytes32 wrongIlk = "RWA2448-A";
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, wrongIlk));
-    reg.finalize(wrongIlk);
-  }
+        bytes32[] memory actualIlks = reg.iter(1, 10);
 
-  function testRevertUpdateFinalizedComponent() public {
-    // bytes32 ilk_
+        // We are starting form index 1, so there will be only 3 elements in the array
+        assertEq(actualIlks.length, 3, "Wrong count");
+        assertEq(actualIlks[0], ilks_[1], "Wrong element at pos: 0");
+        assertEq(actualIlks[1], ilks_[2], "Wrong element at pos: 1");
+        assertEq(actualIlks[2], ilks_[3], "Wrong element at pos: 2");
+    }
 
-    bytes32 ilk_ = "RWA1337-A";
-    address urn_ = address(0x3549);
-    bytes32[] memory originalNames = new bytes32[](1);
-    address[] memory originalAddrs = new address[](1);
-    uint88[] memory originalVariants = new uint88[](1);
-    originalNames[0] = "urn";
-    originalAddrs[0] = urn_;
-    originalVariants[0] = 1;
-    reg.add(ilk_, originalNames, originalAddrs, originalVariants);
-    reg.finalize(ilk_);
+    function testIterDealIlksFromZeroToLargeNumberIsEquivalentToList() public {
+        // bytes32 ilk0_, bytes32 ilk1_
+        // vm.assume(ilk0_ != ilk1_);
 
-    vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, ilk_));
-    reg.setComponent(ilk_, "urn", address(0x2448), 2);
-  }
+        bytes32[] memory ilks_ = new bytes32[](4);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
+        ilks_[3] = "RWA4660-A";
 
-  event Rely(address indexed usr);
-  event Deny(address indexed usr);
-  event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint88 variant);
-  event AddDeal(bytes32 indexed ilk);
-  event FinalizeDeal(bytes32 indexed ilk);
-  event AddSupportedComponent(bytes32 indexed component);
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            reg.add(ilks_[i]);
+        }
+
+        bytes32[] memory iterIlks = reg.iter(0, 10);
+        bytes32[] memory listIlks = reg.list();
+
+        assertEq(abi.encodePacked(iterIlks), abi.encodePacked(listIlks), "Lists are not equal");
+    }
+
+    function testIterDealIlksEmptyIterationParams() public {
+        // bytes32 ilk0_, bytes32 ilk1_
+        // vm.assume(ilk0_ != ilk1_);
+
+        bytes32[] memory ilks_ = new bytes32[](4);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
+        ilks_[3] = "RWA4660-A";
+
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            reg.add(ilks_[i]);
+        }
+
+        bytes32[] memory iterIlks = reg.iter(0, 0);
+
+        assertEq(iterIlks.length, 0, "Should return an empty list");
+    }
+
+    function testReverIterDealIlksInvalidIterationParams() public {
+        // bytes32 ilk0_, bytes32 ilk1_
+        // vm.assume(ilk0_ != ilk1_);
+
+        bytes32[] memory ilks_ = new bytes32[](4);
+        ilks_[0] = "RWA1337-A";
+        ilks_[1] = "RWA2448-A";
+        ilks_[2] = "RWA3559-A";
+        ilks_[3] = "RWA4660-A";
+
+        for (uint256 i = 0; i < ilks_.length; i++) {
+            reg.add(ilks_[i]);
+        }
+
+        vm.expectRevert(RwaRegistry.InvalidIteration.selector);
+
+        reg.iter(10, 0);
+    }
+
+    function testAddNewComponentToDeal() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // uint88 variant_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        uint88 variant_ = 0x2830;
+        reg.add(ilk_);
+
+        reg.setComponent(ilk_, "urn", urn_, variant_);
+
+        assertTrue(reg.hasComponent(ilk_, "urn"));
+        (address addr, uint88 variant) = reg.getComponent(ilk_, "urn");
+        assertEq(addr, urn_, "Component address mismatch");
+        assertEq(variant, variant_, "Component variant mismatch");
+    }
+
+    function testUpdateDealComponent() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // uint88 variant_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        uint88 variant_ = 0x2830;
+        reg.setComponent(ilk_, "urn", urn_, variant_);
+
+        (, uint88 updatedVariant) = reg.getComponent(ilk_, "urn");
+        assertEq(updatedVariant, variant_, "Component variant mismatch");
+    }
+
+    function testRemoveDealComponent() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // uint88 variant_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        reg.removeComponent(ilk_, "urn");
+
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("urn")));
+        reg.getComponent(ilk_, "urn");
+
+        assertEq(reg.listComponentNamesOf(ilk_).length, 0);
+    }
+
+    function testReverGetComponentForUnexistingDeal() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // uint88 variant_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        bytes32 wrongIlk = "RWA2448-A";
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, wrongIlk));
+        reg.getComponent(wrongIlk, "urn");
+    }
+
+    function testRevertGetUnexistentComponentForExistingDeal() public {
+        // bytes32 ilk_,
+        // address urn_,
+        // uint88 variant_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("liquidationOracle"))
+        );
+        reg.getComponent(ilk_, "liquidationOracle");
+    }
+
+    function testRevertUnautorizedUpdateDeal() public {
+        // address sender_,
+        // bytes32 ilk_,
+        // address urn_
+
+        // if (sender_ == address(this)) {
+        //   return;
+        // }
+
+        address sender_ = address(0x1337);
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        vm.expectRevert(RwaRegistry.Unauthorized.selector);
+        vm.prank(sender_);
+
+        reg.setComponent(ilk_, "urn", address(0x1337), 1337);
+    }
+
+    function testFinalizeComponent() public {
+        // bytes32 ilk_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        vm.expectEmit(true, false, false, false);
+        emit FinalizeDeal(ilk_);
+
+        reg.finalize(ilk_);
+
+        (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
+
+        assertEq(uint256(status), uint256(RwaRegistry.DealStatus.FINALIZED));
+    }
+
+    function testRevertFinalizeUnexistingComponent() public {
+        // bytes32 ilk_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+
+        bytes32 wrongIlk = "RWA2448-A";
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, wrongIlk));
+        reg.finalize(wrongIlk);
+    }
+
+    function testRevertUpdateFinalizedComponent() public {
+        // bytes32 ilk_
+
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x3549);
+        bytes32[] memory originalNames = new bytes32[](1);
+        address[] memory originalAddrs = new address[](1);
+        uint88[] memory originalVariants = new uint88[](1);
+        originalNames[0] = "urn";
+        originalAddrs[0] = urn_;
+        originalVariants[0] = 1;
+        reg.add(ilk_, originalNames, originalAddrs, originalVariants);
+        reg.finalize(ilk_);
+
+        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, ilk_));
+        reg.setComponent(ilk_, "urn", address(0x2448), 2);
+    }
+
+    event Rely(address indexed usr);
+    event Deny(address indexed usr);
+    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint88 variant);
+    event AddDeal(bytes32 indexed ilk);
+    event FinalizeDeal(bytes32 indexed ilk);
+    event AddSupportedComponent(bytes32 indexed component);
 }

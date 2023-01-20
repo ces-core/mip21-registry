@@ -179,6 +179,9 @@ contract RwaRegistry {
         _supportedComponents.add("jar");
         emit AddSupportedComponent("jar");
 
+        _supportedComponents.add("jarInputConduit");
+        emit AddSupportedComponent("jarInputConduit");
+
         wards[msg.sender] = 1;
         emit Rely(msg.sender);
     }

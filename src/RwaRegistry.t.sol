@@ -40,12 +40,13 @@ contract RwaRegistryTest is Test {
   //////////////////////////////////*/
 
     function testAddDefaultSupportedComponentsDuringDeployment() public {
-        assertEq(reg.listSupportedComponents().length, 5);
+        assertEq(reg.listSupportedComponents().length, 6);
         assertEq(reg.isSupportedComponent("urn"), true);
         assertEq(reg.isSupportedComponent("liquidationOracle"), true);
         assertEq(reg.isSupportedComponent("outputConduit"), true);
         assertEq(reg.isSupportedComponent("inputConduit"), true);
         assertEq(reg.isSupportedComponent("jar"), true);
+        assertEq(reg.isSupportedComponent("jarInputConduit"), true);
     }
 
     function testAddSupportedComponent() public {

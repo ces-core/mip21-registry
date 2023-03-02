@@ -6,6 +6,10 @@ pragma solidity ^0.8.14;
 import "forge-std/Test.sol";
 import {RwaRegistry} from "./RwaRegistry.sol";
 
+interface Hevm {
+    function load(address, bytes32) external returns (bytes32);
+}
+
 contract RwaRegistryTest is Test {
     RwaRegistry internal reg;
 
@@ -252,6 +256,28 @@ contract RwaRegistryTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
         reg.listComponentsOf(ilk_);
+    }
+
+    function testRemoveDeal() public {
+        // bytes32 ilk_
+
+        bytes32 ilk_ = "RWA1337-A";
+
+        bytes32[] memory names;
+        address[] memory addrs;
+        uint8[] memory variants;
+        reg.add(ilk_, names, addrs, variants);
+
+        (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
+
+        assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
+
+        reg.remove(ilk_);
+
+        (RwaRegistry.DealStatus status_, uint256 pos) = reg.ilkToDeal(ilk_);
+
+        assertEq(uint256(status_), uint256(RwaRegistry.DealStatus.NONE));
+        assertEq(reg.count(), 0);
     }
 
     function testAddDealWithEmptyComponentList() public {

@@ -108,6 +108,12 @@ contract RwaRegistry {
      */
     error DealIsNotActive(bytes32 ilk);
 
+     /**
+     * @notice Revert reason when trying to remove a deal which was already finalized.
+     * @param ilk The ilk related to the deal being added.
+     */
+    error DealIsFinalized(bytes32 ilk);
+
     /**
      * @notice Revert reason when trying to add a component with address set to `address(0)`.
      * @param ilk The ilk related to the deal being added.
@@ -264,6 +270,23 @@ contract RwaRegistry {
     ) external auth {
         _addDeal(ilk);
         _addComponents(ilk, names, addrs, variants);
+    }
+
+
+    /**
+     * @notice Remove a deal identified by `ilk`. Can be only used to remove the last added deal!
+     * In other way it will mess up the indexes in _ilks array as each deal have an index of corresponding ilk in _ilks
+     * @param ilk The ilk name.
+     */
+     function remove(bytes32 ilk) external auth {
+        Deal storage deal = _ilkToDeal[ilk];
+
+        if (deal.status == DealStatus.FINALIZED) {
+            revert DealIsFinalized(ilk);
+        }
+
+        _ilks.remove(ilk);
+        delete _ilkToDeal[ilk];
     }
 
     /**

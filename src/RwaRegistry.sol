@@ -91,11 +91,6 @@ contract RwaRegistry {
     event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint8 variant);
 
     /**
-     * @notice Revert reason when `msg.sender` does not have the required admin access.
-     */
-    error Unauthorized();
-
-    /**
      * @notice Revert reason when trying to add an ilk which already exists.
      * @param ilk The ilk related to the deal being added.
      */
@@ -153,9 +148,7 @@ contract RwaRegistry {
      * @notice Only addresses with admin access can call methods with this modifier.
      */
     modifier auth() {
-        if (wards[msg.sender] != 1) {
-            revert Unauthorized();
-        }
+        require(wards[msg.sender] == 1, "RwaRegistry/not-authorized");
         _;
     }
 

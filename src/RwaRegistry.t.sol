@@ -9,8 +9,27 @@ import {RwaRegistry} from "./RwaRegistry.sol";
 contract RwaRegistryTest is Test {
     RwaRegistry internal reg;
 
+    // --- Hevm ---
+    Hevm private hevm;
+
+    // CHEAT_CODE = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D
+    bytes20 private constant CHEAT_CODE =
+        bytes20(uint160(uint256(keccak256("hevm cheat code"))));
+
+
     function setUp() public {
+        hevm = Hevm(address(CHEAT_CODE));
         reg = new RwaRegistry();
+    }
+
+    function testWardsSlot0x0() public {
+        // Load memory slot 0x0
+        bytes32 rWards = hevm.load(address(reg), keccak256(abi.encode(address(this), uint256(0))));
+
+
+        // reg wards
+        assertEq(reg.wards(address(this)), uint256(rWards));   // Assert wards = slot wards
+        assertEq(uint256(rWards), 1);                          // Assert slot wards == 1
     }
 
     /*//////////////////////////////////
@@ -75,7 +94,7 @@ contract RwaRegistryTest is Test {
         // }
         address sender_ = address(0x1337);
 
-        vm.expectRevert(RwaRegistry.Unauthorized.selector);
+        vm.expectRevert("RwaRegistry/not-authorized");
         vm.prank(sender_);
 
         reg.addSupportedComponent("anything");
@@ -328,7 +347,7 @@ contract RwaRegistryTest is Test {
         address sender_ = address(0x1337);
         bytes32 ilk_ = "RWA1337-A";
 
-        vm.expectRevert(RwaRegistry.Unauthorized.selector);
+        vm.expectRevert("RwaRegistry/not-authorized");
         vm.prank(sender_);
 
         reg.add(ilk_);
@@ -622,7 +641,7 @@ contract RwaRegistryTest is Test {
         originalVariants[0] = 1;
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
-        vm.expectRevert(RwaRegistry.Unauthorized.selector);
+        vm.expectRevert("RwaRegistry/not-authorized");
         vm.prank(sender_);
 
         reg.setComponent(ilk_, "urn", address(0x1337), 133);

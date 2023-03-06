@@ -160,7 +160,6 @@ contract RwaRegistry {
      */
     function addSupportedComponent(bytes32 name) external auth {
         require(!_supportedComponents.contains(name), "RwaRegistry/component-already-supported");
-
         _supportedComponents.add(name);
 
         emit AddSupportedComponent(name);
@@ -219,7 +218,6 @@ contract RwaRegistry {
      */
     function finalize(bytes32 ilk) external auth {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
 
         deal.status = DealStatus.FINALIZED;
@@ -234,7 +232,6 @@ contract RwaRegistry {
      */
     function remove(bytes32 ilk) external auth {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
         require(deal._components.length() == 0, "RwaRegistry/deal-dangling-components");
 
@@ -257,7 +254,6 @@ contract RwaRegistry {
         uint8 variant
     ) external auth {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
 
         _addOrUpdateComponent(ilk, name, addr, variant);
@@ -270,7 +266,6 @@ contract RwaRegistry {
      */
     function removeComponent(bytes32 ilk, bytes32 name) external auth {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
 
         deal._components.remove(name);
@@ -289,11 +284,29 @@ contract RwaRegistry {
     }
 
     /**
+     * @notice Returns the ilk at a given position.
+     * @param pos The desired position.
+     * @return The ilk.
+     */
+    function posToIlk(uint256 pos) external view returns (bytes32) {
+        return _ilks.at(pos);
+    }
+
+    /**
      * @notice Lists all ilks present in the registry.
      * @return The list of ilks.
      */
     function list() external view returns (bytes32[] memory) {
         return _ilks.values();
+    }
+
+    /**
+     * @notice Returns whether the deal identified by `ilk` is in the registry or not.
+     * @param ilk The ilk name.
+     * @return Whether the deal exists or not;
+     */
+    function has(bytes32 ilk) external view returns (bool) {
+        return _ilkToDeal[ilk].status != DealStatus.NONE;
     }
 
     /**
@@ -307,17 +320,23 @@ contract RwaRegistry {
      * @return The list of ilks.
      */
     function iter(uint256 start, uint256 end) external view returns (bytes32[] memory) {
-        require(start <= end, "RwaRegistry/invalid-iteration");
-
         uint256 ilksLength = _ilks.length();
         end = end > ilksLength ? ilksLength : end;
+        require(start <= end, "RwaRegistry/invalid-iteration");
 
         // Since `end` is exclusive, if start == end, then it should return an empty array;
-        uint256 size = end - start;
+        uint256 size;
+        unchecked {
+            size = end - start;
+        }
         bytes32[] memory result = new bytes32[](size);
 
-        for (uint256 i = 0; i < size; i++) {
+        for (uint256 i = 0; i < size; ) {
             result[i] = _ilks.at(start + i);
+
+            unchecked {
+                i++;
+            }
         }
 
         return result;
@@ -332,25 +351,56 @@ contract RwaRegistry {
     }
 
     /**
-     * @notice Returns the ilk at a given position.
-     * @param pos The desired position.
-     * @return The ilk.
-     */
-    function posToIlk(uint256 pos) external view returns (bytes32) {
-        return _ilks.at(pos);
-    }
-
-    /**
      * @notice Returns the list of components associated to `ilk`.
      * @param ilk The ilk name.
      * @return The list of component names.
      */
-    function listComponentNamesOf(bytes32 ilk) external view returns (bytes32[] memory) {
+    function listComponentNames(bytes32 ilk) external view returns (bytes32[] memory) {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
         return deal._components.values();
+    }
+
+    /**
+     * @notice Iterates through component names of a deal from `start` (inclusive) to `end` (exclusive).
+     * @dev If `end > items.length`, it will stop the iteration at `items.length`.
+     * @dev Examples:
+     *    - iterComponentNamess(0,10) will return 10 elements, from 0 to 9 if the components array have at least 10 elements.
+     *    - iterComponentNamess(0,10) will return 3 elements, from 0 to 2 if the components array have only 3 elements.
+     * @param ilk The ilk name.
+     * @param start The 0-based index to start the iteration (inclusive).
+     * @param end The 0-based index to stop the iteration (exclusive).
+     * @return The list of component names.
+     */
+    function iterComponentNames(
+        bytes32 ilk,
+        uint256 start,
+        uint256 end
+    ) external view returns (bytes32[] memory) {
+        Deal storage deal = _ilkToDeal[ilk];
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
+
+        uint256 componentsLength = deal._components.length();
+        end = end > componentsLength ? componentsLength : end;
+        require(start <= end, "RwaRegistry/invalid-iteration");
+
+        // Since `end` is exclusive, if start == end, then it should return an empty array;
+        uint256 size;
+        unchecked {
+            size = end - start;
+        }
+        bytes32[] memory names = new bytes32[](size);
+
+        for (uint256 i = 0; i < size; ) {
+            names[i] = deal._components.at(start + i);
+
+            unchecked {
+                i++;
+            }
+        }
+
+        return names;
     }
 
     /**
@@ -360,7 +410,7 @@ contract RwaRegistry {
      * @return addrs The list of component addresses.
      * @return variants The list of component variants.
      */
-    function listComponentsOf(bytes32 ilk)
+    function listComponents(bytes32 ilk)
         external
         view
         returns (
@@ -370,7 +420,6 @@ contract RwaRegistry {
         )
     {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
         uint256 length = deal._components.length();
@@ -379,12 +428,84 @@ contract RwaRegistry {
         addrs = new address[](length);
         variants = new uint8[](length);
 
-        for (uint256 i = 0; i < names.length; i++) {
+        for (uint256 i = 0; i < names.length; ) {
             Component storage component = deal._nameToComponent[names[i]];
 
             addrs[i] = component.addr;
             variants[i] = component.variant;
+
+            unchecked {
+                i++;
+            }
         }
+    }
+
+    /**
+     * @notice Iterates through components of a deal from `start` (inclusive) to `end` (exclusive).
+     * @dev If `end > items.length`, it will stop the iteration at `items.length`.
+     * @dev Examples:
+     *    - iterComponentNamess(0,10) will return 10 elements, from 0 to 9 if the components array have at least 10 elements.
+     *    - iterComponentNamess(0,10) will return 3 elements, from 0 to 2 if the components array have only 3 elements.
+     * @param ilk The ilk name.
+     * @param start The 0-based index to start the iteration (inclusive).
+     * @param end The 0-based index to stop the iteration (exclusive).
+     * @return names The list of component names.
+     * @return addrs The list of component addresses.
+     * @return variants The list of component variants.
+     */
+    function iterComponents(
+        bytes32 ilk,
+        uint256 start,
+        uint256 end
+    )
+        external
+        view
+        returns (
+            bytes32[] memory names,
+            address[] memory addrs,
+            uint8[] memory variants
+        )
+    {
+        Deal storage deal = _ilkToDeal[ilk];
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
+
+        uint256 componentsLength = deal._components.length();
+        end = end > componentsLength ? componentsLength : end;
+        require(start <= end, "RwaRegistry/invalid-iteration");
+
+        // Since `end` is exclusive, if start == end, then it should return an empty array;
+        uint256 size;
+        unchecked {
+            size = end - start;
+        }
+
+        names = new bytes32[](size);
+        addrs = new address[](size);
+        variants = new uint8[](size);
+
+        for (uint256 i = 0; i < size; ) {
+            names[i] = deal._components.at(start + i);
+
+            Component storage component = deal._nameToComponent[names[i]];
+            addrs[i] = component.addr;
+            variants[i] = component.variant;
+
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    /**
+     * @notice Returns the number of components associated to `ilk`.
+     * @param ilk The ilk name.
+     * @return The number of components;
+     */
+    function countComponents(bytes32 ilk) external view returns (uint256) {
+        Deal storage deal = _ilkToDeal[ilk];
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
+
+        return deal._components.length();
     }
 
     /**
@@ -408,11 +529,9 @@ contract RwaRegistry {
      */
     function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint8 variant) {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
         Component storage component = deal._nameToComponent[name];
-
         require(component.exists, string(abi.encodePacked("RwaRegistry/invalid-component-", name)));
 
         addr = component.addr;
@@ -429,7 +548,6 @@ contract RwaRegistry {
      */
     function _addDeal(bytes32 ilk) internal {
         Deal storage deal = _ilkToDeal[ilk];
-
         require(deal.status == DealStatus.NONE, "RwaRegistry/deal-already-exists");
 
         _ilks.add(ilk);
@@ -459,8 +577,12 @@ contract RwaRegistry {
             "RwaRegistry/mismatching-component-params"
         );
 
-        for (uint256 i = 0; i < names.length; i++) {
+        for (uint256 i = 0; i < names.length; ) {
             _addOrUpdateComponent(ilk, names[i], addrs[i], variants[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 

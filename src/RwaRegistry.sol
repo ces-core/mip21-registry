@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: © 2022 Dai Foundation <www.daifoundation.org>
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-or-later AND MIT
 
 pragma solidity ^0.8.14;
 
@@ -11,6 +11,53 @@ import {EnumerableSet} from "./EnumerableSet.sol";
  * @notice Registry for different deals onboarded into MCD.
  */
 contract RwaRegistry {
+    /*//////////////////////////////////
+          MCD-style Authorization
+    //////////////////////////////////*/
+
+    /// @notice Addresses with admin access on this contract. `wards[usr]`.
+    mapping(address => uint256) public wards;
+
+    /**
+     * @notice `usr` was granted admin access.
+     * @param usr The user address.
+     */
+    event Rely(address indexed usr);
+
+    /**
+     * @notice `usr` admin access was revoked.
+     * @param usr The user address.
+     */
+    event Deny(address indexed usr);
+
+    /**
+     * @notice Only addresses with admin access can call methods with this modifier.
+     */
+    modifier auth() {
+        require(wards[msg.sender] == 1, "RwaRegistry/not-authorized");
+        _;
+    }
+
+    /**
+     * @notice Grants `usr` admin access to this contract.
+     * @param usr The user address.
+     */
+    function rely(address usr) external auth {
+        wards[usr] = 1;
+        emit Rely(usr);
+    }
+
+    /**
+     * @notice Revokes `usr` admin access from this contract.
+     * @param usr The user address.
+     */
+    function deny(address usr) external auth {
+        wards[usr] = 0;
+        emit Deny(usr);
+    }
+
+    // ------------------------------------
+
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
@@ -39,9 +86,6 @@ contract RwaRegistry {
         uint8 variant; // Variant of the component implementation (1, 2, ...). Any reserved values should be documented.
     }
 
-    /// @notice Addresses with admin access on this contract. `wards[usr]`.
-    mapping(address => uint256) public wards;
-
     /// @notice An enumerable set of all supported component names.
     EnumerableSet.Bytes32Set internal _supportedComponents;
 
@@ -50,18 +94,6 @@ contract RwaRegistry {
 
     /// @notice Maps a RWA ilk to the related deal. `_ilkToDeal[ilk]`
     mapping(bytes32 => Deal) internal _ilkToDeal;
-
-    /**
-     * @notice `usr` was granted admin access.
-     * @param usr The user address.
-     */
-    event Rely(address indexed usr);
-
-    /**
-     * @notice `usr` admin access was revoked.
-     * @param usr The user address.
-     */
-    event Deny(address indexed usr);
 
     /**
      * @notice The deal identified by `ilk` was added to the registry.
@@ -91,54 +123,6 @@ contract RwaRegistry {
     event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint8 variant);
 
     /**
-     * @notice Revert reason when trying to add an ilk which already exists.
-     * @param ilk The ilk related to the deal being added.
-     */
-    error DealAlreadyExists(bytes32 ilk);
-
-    /**
-     * @notice Revert reason when trying to read or modify a deal for an ilk which does not exist.
-     * @param ilk The ilk related to the deal being added.
-     */
-    error DealDoesNotExist(bytes32 ilk);
-
-    /**
-     * @notice Revert reason when trying to modify a deal which was already finalized.
-     * @param ilk The ilk related to the deal being added.
-     */
-    error DealIsNotActive(bytes32 ilk);
-
-     /**
-     * @notice Revert reason when trying to remove a deal which was already finalized.
-     * @param ilk The ilk related to the deal being added.
-     */
-    error DealIsFinalized(bytes32 ilk);
-
-    /**
-     * @notice Revert reason when trying to add a component with address set to `address(0)`.
-     * @param ilk The ilk related to the deal being added.
-     * @param name The component name.
-     */
-    error InvalidComponentAddress(bytes32 ilk, bytes32 name);
-
-    /**
-     * @notice Revert reason when trying to add an unsupported component.
-     * @param name The unsupported component name.
-     */
-    error UnsupportedComponent(bytes32 name);
-
-    /**
-     * @notice Revert reason when trying to add an supported component more than once.
-     * @param name The component name.
-     */
-    error ComponentAlreadySupported(bytes32 name);
-
-    /**
-     * @notice Revert reason when trying to add components with mismatching params.
-     */
-    error MismatchingComponentParams();
-
-    /**
      * @notice Revert reason when calling iterator methods with bad parameters.
      */
     error InvalidIteration();
@@ -149,14 +133,6 @@ contract RwaRegistry {
      * @param name The unsupported component name.
      */
     error ComponentDoesNotExist(bytes32 ilk, bytes32 name);
-
-    /**
-     * @notice Only addresses with admin access can call methods with this modifier.
-     */
-    modifier auth() {
-        require(wards[msg.sender] == 1, "RwaRegistry/not-authorized");
-        _;
-    }
 
     /**
      * @notice The deployer of the contract gains admin access to it.
@@ -186,30 +162,8 @@ contract RwaRegistry {
     }
 
     /*//////////////////////////////////
-              Authorization
-  //////////////////////////////////*/
-
-    /**
-     * @notice Grants `usr` admin access to this contract.
-     * @param usr The user address.
-     */
-    function rely(address usr) external auth {
-        wards[usr] = 1;
-        emit Rely(usr);
-    }
-
-    /**
-     * @notice Revokes `usr` admin access from this contract.
-     * @param usr The user address.
-     */
-    function deny(address usr) external auth {
-        wards[usr] = 0;
-        emit Deny(usr);
-    }
-
-    /*//////////////////////////////////
-     Supported Components Management
-  //////////////////////////////////*/
+      Supported Components Management
+    //////////////////////////////////*/
 
     /**
      * @notice Adds a supported component name to the registry.
@@ -217,9 +171,7 @@ contract RwaRegistry {
      * @param name The "pascalCased" name of the component.
      */
     function addSupportedComponent(bytes32 name) external auth {
-        if (_supportedComponents.contains(name)) {
-            revert ComponentAlreadySupported(name);
-        }
+        require(!_supportedComponents.contains(name), "RwaRegistry/component-already-supported");
 
         _supportedComponents.add(name);
 
@@ -244,8 +196,8 @@ contract RwaRegistry {
     }
 
     /*//////////////////////////////////
-     Deals & Components Management
-  //////////////////////////////////*/
+       Deals & Components Management
+    //////////////////////////////////*/
 
     /**
      * @notice Adds a deal identified by `ilk` to the registry.
@@ -272,23 +224,6 @@ contract RwaRegistry {
         _addComponents(ilk, names, addrs, variants);
     }
 
-
-    /**
-     * @notice Remove a deal identified by `ilk`. Can be only used to remove the last added deal!
-     * In other way it will mess up the indexes in _ilks array as each deal have an index of corresponding ilk in _ilks
-     * @param ilk The ilk name.
-     */
-     function remove(bytes32 ilk) external auth {
-        Deal storage deal = _ilkToDeal[ilk];
-
-        if (deal.status == DealStatus.FINALIZED) {
-            revert DealIsFinalized(ilk);
-        }
-
-        _ilks.remove(ilk);
-        delete _ilkToDeal[ilk];
-    }
-
     /**
      * @notice Marks the deal identified by `ilk` as finalized. i
      * @dev Further registry updates for that deal will be forbidden.
@@ -297,9 +232,7 @@ contract RwaRegistry {
     function finalize(bytes32 ilk) external auth {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status != DealStatus.ACTIVE) {
-            revert DealIsNotActive(ilk);
-        }
+        require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
 
         deal.status = DealStatus.FINALIZED;
 
@@ -321,9 +254,7 @@ contract RwaRegistry {
     ) external auth {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status != DealStatus.ACTIVE) {
-            revert DealIsNotActive(ilk);
-        }
+        require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
 
         _addOrUpdateComponent(ilk, name, addr, variant);
     }
@@ -336,9 +267,7 @@ contract RwaRegistry {
     function removeComponent(bytes32 ilk, bytes32 name) external auth {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status != DealStatus.ACTIVE) {
-            revert DealIsNotActive(ilk);
-        }
+        require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
 
         deal._components.remove(name);
         delete deal._nameToComponent[name];
@@ -374,9 +303,7 @@ contract RwaRegistry {
      * @return The list of ilks.
      */
     function iter(uint256 start, uint256 end) external view returns (bytes32[] memory) {
-        if (start > end) {
-            revert InvalidIteration();
-        }
+        require(start <= end, "RwaRegistry/invalid-iteration");
 
         uint256 ilksLength = _ilks.length();
         end = end > ilksLength ? ilksLength : end;
@@ -417,9 +344,7 @@ contract RwaRegistry {
     function listComponentNamesOf(bytes32 ilk) external view returns (bytes32[] memory) {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status == DealStatus.NONE) {
-            revert DealDoesNotExist(ilk);
-        }
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
         return deal._components.values();
     }
@@ -442,9 +367,7 @@ contract RwaRegistry {
     {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status == DealStatus.NONE) {
-            revert DealDoesNotExist(ilk);
-        }
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
         uint256 length = deal._components.length();
 
@@ -482,9 +405,7 @@ contract RwaRegistry {
     function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint8 variant) {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status == DealStatus.NONE) {
-            revert DealDoesNotExist(ilk);
-        }
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
         Component storage component = deal._nameToComponent[name];
 
@@ -497,8 +418,8 @@ contract RwaRegistry {
     }
 
     /*//////////////////////////////////
-            Internal Methods
-  //////////////////////////////////*/
+              Internal Methods
+    //////////////////////////////////*/
 
     /**
      * @notice Adds a deal identified by `ilk` with its components to the registry.
@@ -507,9 +428,7 @@ contract RwaRegistry {
     function _addDeal(bytes32 ilk) internal {
         Deal storage deal = _ilkToDeal[ilk];
 
-        if (deal.status != DealStatus.NONE) {
-            revert DealAlreadyExists(ilk);
-        }
+        require(deal.status == DealStatus.NONE, "RwaRegistry/deal-already-exists");
 
         _ilks.add(ilk);
 
@@ -533,9 +452,10 @@ contract RwaRegistry {
         address[] calldata addrs,
         uint8[] calldata variants
     ) internal {
-        if (!(names.length == addrs.length && names.length == variants.length)) {
-            revert MismatchingComponentParams();
-        }
+        require(
+            names.length == addrs.length && names.length == variants.length,
+            "RwaRegistry/mismatching-component-params"
+        );
 
         for (uint256 i = 0; i < names.length; i++) {
             _addOrUpdateComponent(ilk, names[i], addrs[i], variants[i]);
@@ -555,13 +475,8 @@ contract RwaRegistry {
         address addr,
         uint8 variant
     ) internal {
-        if (!_supportedComponents.contains(name)) {
-            revert UnsupportedComponent(name);
-        }
-
-        if (addr == address(0)) {
-            revert InvalidComponentAddress(ilk, name);
-        }
+        require(_supportedComponents.contains(name), "RwaRegistry/unsupported-component");
+        require(addr != address(0), "RwaRegistry/invalid-component-addr");
 
         Deal storage deal = _ilkToDeal[ilk];
         Component storage component = deal._nameToComponent[name];

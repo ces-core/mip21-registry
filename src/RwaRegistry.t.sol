@@ -87,7 +87,7 @@ contract RwaRegistryTest is Test {
         bytes32 componentName_ = "anything";
         reg.addSupportedComponent(componentName_);
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentAlreadySupported.selector, componentName_));
+        vm.expectRevert("RwaRegistry/component-already-supported");
         reg.addSupportedComponent(componentName_);
     }
 
@@ -200,7 +200,7 @@ contract RwaRegistryTest is Test {
         variants[0] = 1;
         variants[1] = 1;
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.UnsupportedComponent.selector, names[1]));
+        vm.expectRevert("RwaRegistry/unsupported-component");
         reg.add(ilk_, names, addrs, variants);
     }
 
@@ -221,7 +221,7 @@ contract RwaRegistryTest is Test {
         uint8[] memory variants = new uint8[](1);
         variants[0] = 1;
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.InvalidComponentAddress.selector, ilk_, names[0]));
+        vm.expectRevert("RwaRegistry/invalid-component-addr");
         reg.add(ilk_, names, addrs, variants);
     }
 
@@ -245,7 +245,7 @@ contract RwaRegistryTest is Test {
         variants[0] = 1;
         variants[1] = 1;
 
-        vm.expectRevert(RwaRegistry.MismatchingComponentParams.selector);
+        vm.expectRevert("RwaRegistry/mismatching-component-params");
         reg.add(ilk_, names, addrs, variants);
     }
 
@@ -254,7 +254,7 @@ contract RwaRegistryTest is Test {
 
         bytes32 ilk_ = "RWA1337-A";
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
+        vm.expectRevert("RwaRegistry/invalid-deal");
         reg.listComponentsOf(ilk_);
     }
 
@@ -331,7 +331,7 @@ contract RwaRegistryTest is Test {
 
         bytes32 ilk_ = "RWA1337-A";
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, ilk_));
+        vm.expectRevert("RwaRegistry/invalid-deal");
         reg.listComponentNamesOf(ilk_);
     }
 
@@ -358,7 +358,7 @@ contract RwaRegistryTest is Test {
         bytes32 ilk_ = "RWA1337-A";
         reg.add(ilk_);
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealAlreadyExists.selector, ilk_));
+        vm.expectRevert("RwaRegistry/deal-already-exists");
         reg.add(ilk_);
     }
 
@@ -536,7 +536,7 @@ contract RwaRegistryTest is Test {
             reg.add(ilks_[i]);
         }
 
-        vm.expectRevert(RwaRegistry.InvalidIteration.selector);
+        vm.expectRevert("RwaRegistry/invalid-iteration");
 
         reg.iter(10, 0);
     }
@@ -622,7 +622,7 @@ contract RwaRegistryTest is Test {
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
         bytes32 wrongIlk = "RWA2448-A";
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealDoesNotExist.selector, wrongIlk));
+        vm.expectRevert("RwaRegistry/invalid-deal");
         reg.getComponent(wrongIlk, "urn");
     }
 
@@ -710,7 +710,7 @@ contract RwaRegistryTest is Test {
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
         bytes32 wrongIlk = "RWA2448-A";
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, wrongIlk));
+        vm.expectRevert("RwaRegistry/deal-not-active");
         reg.finalize(wrongIlk);
     }
 
@@ -728,7 +728,7 @@ contract RwaRegistryTest is Test {
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
         reg.finalize(ilk_);
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.DealIsNotActive.selector, ilk_));
+        vm.expectRevert("RwaRegistry/deal-not-active");
         reg.setComponent(ilk_, "urn", address(0x2448), 2);
     }
 

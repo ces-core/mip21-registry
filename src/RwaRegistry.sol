@@ -123,18 +123,6 @@ contract RwaRegistry {
     event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint8 variant);
 
     /**
-     * @notice Revert reason when calling iterator methods with bad parameters.
-     */
-    error InvalidIteration();
-
-    /**
-     * @notice Revert reason when trying to get a component `name` which does not exist for the deal identified by `ilk`
-     * @param ilk The ilk name.
-     * @param name The unsupported component name.
-     */
-    error ComponentDoesNotExist(bytes32 ilk, bytes32 name);
-
-    /**
      * @notice The deployer of the contract gains admin access to it.
      * @dev Adds the default supported component names to the registry.
      */
@@ -237,6 +225,22 @@ contract RwaRegistry {
         deal.status = DealStatus.FINALIZED;
 
         emit FinalizeDeal(ilk);
+    }
+
+    /**
+     * @notice Removes a deal identified by `ilk`.
+     * @dev A deal cannot be removed before all of its components have been removed.
+     * @param ilk The ilk name.
+     */
+    function remove(bytes32 ilk) external auth {
+        Deal storage deal = _ilkToDeal[ilk];
+
+        require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
+        require(deal._components.length() == 0, "RwaRegistry/deal-dangling-components");
+
+        delete deal.status;
+        delete deal.pos;
+        _ilks.remove(ilk);
     }
 
     /**
@@ -409,9 +413,7 @@ contract RwaRegistry {
 
         Component storage component = deal._nameToComponent[name];
 
-        if (!component.exists) {
-            revert ComponentDoesNotExist(ilk, name);
-        }
+        require(component.exists, string(abi.encodePacked("RwaRegistry/invalid-component-", name)));
 
         addr = component.addr;
         variant = component.variant;

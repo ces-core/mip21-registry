@@ -6,39 +6,25 @@ pragma solidity ^0.8.14;
 import "forge-std/Test.sol";
 import {RwaRegistry} from "./RwaRegistry.sol";
 
-interface Hevm {
-    function load(address, bytes32) external returns (bytes32);
-}
-
 contract RwaRegistryTest is Test {
     RwaRegistry internal reg;
 
-    // --- Hevm ---
-    Hevm private hevm;
-
-    // CHEAT_CODE = 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D
-    bytes20 private constant CHEAT_CODE =
-        bytes20(uint160(uint256(keccak256("hevm cheat code"))));
-
-
     function setUp() public {
-        hevm = Hevm(address(CHEAT_CODE));
         reg = new RwaRegistry();
     }
 
+    /*//////////////////////////////////
+                Authorization
+    //////////////////////////////////*/
+
     function testWardsSlot0x0() public {
         // Load memory slot 0x0
-        bytes32 rWards = hevm.load(address(reg), keccak256(abi.encode(address(this), uint256(0))));
-
+        bytes32 rWards = vm.load(address(reg), keccak256(abi.encode(address(this), uint256(0))));
 
         // reg wards
-        assertEq(reg.wards(address(this)), uint256(rWards));   // Assert wards = slot wards
-        assertEq(uint256(rWards), 1);                          // Assert slot wards == 1
+        assertEq(reg.wards(address(this)), uint256(rWards)); // Assert wards = slot wards
+        assertEq(uint256(rWards), 1); // Assert slot wards == 1
     }
-
-    /*//////////////////////////////////
-              Authorization
-  //////////////////////////////////*/
 
     function testRely() public {
         vm.expectEmit(true, false, false, false);
@@ -59,8 +45,8 @@ contract RwaRegistryTest is Test {
     }
 
     /*//////////////////////////////////
-     Supported Components Management
-  //////////////////////////////////*/
+        Supported Components Management
+    //////////////////////////////////*/
 
     function testAddDefaultSupportedComponentsDuringDeployment() public {
         assertEq(reg.listSupportedComponents().length, 6);
@@ -105,8 +91,8 @@ contract RwaRegistryTest is Test {
     }
 
     /*//////////////////////////////////
-     Deals & Components Management
-  //////////////////////////////////*/
+        Deals & Components Management
+    //////////////////////////////////*/
 
     function testAddDealAndComponents() public {
         // bytes32 ilk_,
@@ -274,10 +260,37 @@ contract RwaRegistryTest is Test {
 
         reg.remove(ilk_);
 
-        (RwaRegistry.DealStatus status_, uint256 pos) = reg.ilkToDeal(ilk_);
+        (RwaRegistry.DealStatus status_, ) = reg.ilkToDeal(ilk_);
 
         assertEq(uint256(status_), uint256(RwaRegistry.DealStatus.NONE));
-        assertEq(reg.count(), 0);
+        assertEq(reg.count(), 0, "Deal was not removed");
+    }
+
+    function testRevertRemoveWithDanglingComponentsDeal() public {
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x1337);
+        address liquidationOracle_ = address(0x2448);
+
+        bytes32[] memory names = new bytes32[](2);
+        names[0] = "urn";
+        names[1] = "liquidationOracle";
+
+        address[] memory addrs = new address[](2);
+        addrs[0] = urn_;
+        addrs[1] = liquidationOracle_;
+
+        uint8[] memory variants = new uint8[](2);
+        variants[0] = 1;
+        variants[1] = 1;
+
+        reg.add(ilk_, names, addrs, variants);
+
+        (RwaRegistry.DealStatus status, ) = reg.ilkToDeal(ilk_);
+
+        assertEq(uint256(status), uint256(RwaRegistry.DealStatus.ACTIVE));
+
+        vm.expectRevert("RwaRegistry/deal-dangling-components");
+        reg.remove(ilk_);
     }
 
     function testAddDealWithEmptyComponentList() public {
@@ -600,7 +613,7 @@ contract RwaRegistryTest is Test {
 
         reg.removeComponent(ilk_, "urn");
 
-        vm.expectRevert(abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("urn")));
+        vm.expectRevert(abi.encodePacked("RwaRegistry/invalid-component-", bytes32("urn")));
         reg.getComponent(ilk_, "urn");
 
         assertEq(reg.listComponentNamesOf(ilk_).length, 0);
@@ -641,9 +654,7 @@ contract RwaRegistryTest is Test {
         originalVariants[0] = 1;
         reg.add(ilk_, originalNames, originalAddrs, originalVariants);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(RwaRegistry.ComponentDoesNotExist.selector, ilk_, bytes32("liquidationOracle"))
-        );
+        vm.expectRevert(abi.encodePacked("RwaRegistry/invalid-component-", bytes32("liquidationOracle")));
         reg.getComponent(ilk_, "liquidationOracle");
     }
 

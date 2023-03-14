@@ -39,11 +39,15 @@ Deal components consist of:
 
 - `name: bytes32`: the `camelCased` name of the component. It has to be one of the supported components.
 - `addr: address`: the address of the component, be it a smart contract or an EOA.
-- `variant: uint8`: we have identified early on that components fulfilling the same role may have different
+- `variant: uint8`<sup>\*</sup>: we have identified early on that components fulfilling the same role may have different
   implementations. Following the same approach of the [`GemJoin` adapters](https://github.com/makerdao/dss-gem-joins/),
   each implementation has a numeric suffix identifying it. This allows consumers to know precisely with which
   implementation they are dealing with when querying the registry. Different components can have different reserved
   values for variants with special meaning and should be documented below.
+
+<sup>\*</sup> Variant is only stored as `uint8`, but when used as `calldata` (parameters of or returning from functions)
+they are upcast to `uint256`. See this
+[article](https://blog.pessimistic.io/short-types-in-solidity-rare-tricks-uncovered-46b742c554c9) for further reference.
 
 ## List of currently supported components
 

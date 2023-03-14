@@ -120,7 +120,7 @@ contract RwaRegistry {
      * @param addr The component address.
      * @param variant The component variant.
      */
-    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint8 variant);
+    event SetComponent(bytes32 indexed ilk, bytes32 indexed name, address addr, uint256 variant);
 
     /**
      * @notice The deployer of the contract gains admin access to it.
@@ -205,7 +205,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32[] calldata names,
         address[] calldata addrs,
-        uint8[] calldata variants
+        uint256[] calldata variants
     ) external auth {
         _addDeal(ilk);
         _addComponents(ilk, names, addrs, variants);
@@ -251,7 +251,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32 name,
         address addr,
-        uint8 variant
+        uint256 variant
     ) external auth {
         Deal storage deal = _ilkToDeal[ilk];
         require(deal.status == DealStatus.ACTIVE, "RwaRegistry/deal-not-active");
@@ -416,7 +416,7 @@ contract RwaRegistry {
         returns (
             bytes32[] memory names,
             address[] memory addrs,
-            uint8[] memory variants
+            uint256[] memory variants
         )
     {
         Deal storage deal = _ilkToDeal[ilk];
@@ -426,7 +426,7 @@ contract RwaRegistry {
 
         names = deal._components.values();
         addrs = new address[](length);
-        variants = new uint8[](length);
+        variants = new uint256[](length);
 
         for (uint256 i = 0; i < names.length; ) {
             Component storage component = deal._nameToComponent[names[i]];
@@ -463,7 +463,7 @@ contract RwaRegistry {
         returns (
             bytes32[] memory names,
             address[] memory addrs,
-            uint8[] memory variants
+            uint256[] memory variants
         )
     {
         Deal storage deal = _ilkToDeal[ilk];
@@ -481,7 +481,7 @@ contract RwaRegistry {
 
         names = new bytes32[](size);
         addrs = new address[](size);
-        variants = new uint8[](size);
+        variants = new uint256[](size);
 
         for (uint256 i = 0; i < size; ) {
             names[i] = deal._components.at(start + i);
@@ -527,7 +527,7 @@ contract RwaRegistry {
      * @return addr The component address.
      * @return variant The component variant.
      */
-    function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint8 variant) {
+    function getComponent(bytes32 ilk, bytes32 name) external view returns (address addr, uint256 variant) {
         Deal storage deal = _ilkToDeal[ilk];
         require(deal.status != DealStatus.NONE, "RwaRegistry/invalid-deal");
 
@@ -570,7 +570,7 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32[] calldata names,
         address[] calldata addrs,
-        uint8[] calldata variants
+        uint256[] calldata variants
     ) internal {
         require(
             names.length == addrs.length && names.length == variants.length,
@@ -597,10 +597,11 @@ contract RwaRegistry {
         bytes32 ilk,
         bytes32 name,
         address addr,
-        uint8 variant
+        uint256 variant
     ) internal {
         require(_supportedComponents.contains(name), "RwaRegistry/unsupported-component");
         require(addr != address(0), "RwaRegistry/invalid-component-addr");
+        require(variant <= type(uint8).max, "RwaRegistry/invalid-variant");
 
         Deal storage deal = _ilkToDeal[ilk];
         Component storage component = deal._nameToComponent[name];
@@ -611,7 +612,7 @@ contract RwaRegistry {
         }
 
         component.addr = addr;
-        component.variant = variant;
+        component.variant = uint8(variant);
 
         emit SetComponent(ilk, name, addr, variant);
     }

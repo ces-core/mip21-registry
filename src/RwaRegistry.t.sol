@@ -260,15 +260,15 @@ contract RwaRegistryTest is Test {
         address urn_ = address(0x1337);
         address someAddr_ = address(0x2448);
 
-        bytes32[] memory names = new bytes32[](5);
+        bytes32[] memory names = new bytes32[](2);
         names[0] = "urn";
         names[1] = "something";
 
-        address[] memory addrs = new address[](5);
+        address[] memory addrs = new address[](2);
         addrs[0] = urn_;
         addrs[1] = someAddr_;
 
-        uint256[] memory variants = new uint256[](5);
+        uint256[] memory variants = new uint256[](2);
         variants[0] = 1;
         variants[1] = 1;
 
@@ -290,6 +290,23 @@ contract RwaRegistryTest is Test {
         variants[0] = 1;
 
         vm.expectRevert("RwaRegistry/invalid-component-addr");
+        reg.add(ilk_, names, addrs, variants);
+    }
+
+    function testRevertAddDealWithInvalidVariant() public {
+        bytes32 ilk_ = "RWA1337-A";
+        address urn_ = address(0x1337);
+
+        bytes32[] memory names = new bytes32[](1);
+        names[0] = "urn";
+
+        address[] memory addrs = new address[](1);
+        addrs[0] = urn_;
+
+        uint256[] memory variants = new uint256[](1);
+        variants[0] = 256; // variant does not fit into a `uint8`
+
+        vm.expectRevert("RwaRegistry/invalid-variant");
         reg.add(ilk_, names, addrs, variants);
     }
 

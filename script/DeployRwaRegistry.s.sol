@@ -57,7 +57,7 @@ contract DeployRwaRegistry is Script {
         addrs[2] = chainlog.getAddress("RWA008_A_INPUT_CONDUIT");
         addrs[3] = rwaLiquidationOracle;
 
-        uint8[] memory variants = new uint8[](4);
+        uint256[] memory variants = new uint256[](4);
         variants[0] = 2; // RwaUrn2
         variants[1] = 2; // RwaOutputConduit2
         variants[2] = 2; // RwaInputConduit2
@@ -79,7 +79,7 @@ contract DeployRwaRegistry is Script {
         addrs[2] = chainlog.getAddress("RWA009_A_OUTPUT_CONDUIT");
         addrs[3] = rwaLiquidationOracle;
 
-        uint8[] memory variants = new uint8[](4);
+        uint256[] memory variants = new uint256[](4);
         variants[0] = 2; // RwaUrn2
         variants[1] = 1; // RwaJar
         variants[2] = type(uint8).max; // Regular address

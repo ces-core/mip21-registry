@@ -19,7 +19,13 @@ simulate-deploy() {
 	# Start anvil
 	anvil --port $ANVIL_PORT $@ &
 	local ANVIL_PID=$!
-	sleep 10
+
+	# Wait until anvil is listening on the proper port
+	{
+		while ! echo -n >"/dev/tcp/localhost/${ANVIL_PORT}"; do
+			sleep 1
+		done
+	} 2>/dev/null
 
 	local RESPONSE=$($FORGE_SCRIPT DeployRwaRegistry -vvv --broadcast --rpc-url $ANVIL_RPC_URL | tee >(cat 1>&2))
 	local MIP21_REGISTRY=$(jq -Rr 'fromjson? | .returns["0"].value' <<<"$RESPONSE")

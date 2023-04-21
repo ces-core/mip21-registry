@@ -101,12 +101,13 @@ The RWA input conduit, acts as a temporary holder for Dai or other gems when it 
 
 **Variants:**
 
-|  #  | Description                                                                                                                                                   |
-| :-: | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `1` | The base implementation the input conduit. See [`RwaInputConduit.sol`][rwa-input-conduit]                                                                     |
-| `2` | Based on `#1`, with a permissioned `push()` method. See [`RwaInputConduit2.sol`][rwa-input-conduit2]                                                          |
-| `3` | Designed to receive PSM gems and swap them into a Dai on `push()`. See [`RwaSwapInputConduit.sol`][rwa-swap-input-conduit]                                    |
-| `4` | Designed to receive PSM gems and swap them into a Dai on `push()`, with a permissionless `push()`. See [`RwaSwapInputConduit2.sol`][rwa-swap-input-conduit-2] |
+|          #          | Description                                                                                                                                                   |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|         `1`         | The base implementation the input conduit. See [`RwaInputConduit.sol`][rwa-input-conduit]                                                                     |
+|         `2`         | Based on `#1`, with a permissioned `push()` method. See [`RwaInputConduit2.sol`][rwa-input-conduit2]                                                          |
+|         `3`         | Designed to receive PSM gems and swap them into a Dai on `push()`. See [`RwaSwapInputConduit.sol`][rwa-swap-input-conduit]                                    |
+|         `4`         | Designed to receive PSM gems and swap them into a Dai on `push()`, with a permissionless `push()`. See [`RwaSwapInputConduit2.sol`][rwa-swap-input-conduit-2] |
+| `type(uint8).max-1` | Tinlake contract integration with Centrifuge protocol                                                                                                         |
 
 [rwa-input-conduit]: https://github.com/makerdao/mip21-toolkit/blob/master/src/conduits/RwaInputConduit.sol
 [rwa-input-conduit2]: https://github.com/makerdao/mip21-toolkit/blob/master/src/conduits/RwaInputConduit2.sol

@@ -33,8 +33,20 @@ contract DeployRwaRegistry is Script {
 
         reg = new RwaRegistry();
 
-        _addRWA008A();
-        _addRWA009A();
+        _addRWA001();
+        _addRWA002();
+        _addRWA003();
+        _addRWA004();
+        _addRWA005();
+        _addRWA006();
+        _addRWA007();
+        _addRWA008();
+        _addRWA009();
+        _addRWA010();
+        _addRWA011();
+        _addRWA012();
+        _addRWA013();
+        _addGUSD();
 
         reg.rely(mcdPauseProxy);
         reg.deny(msg.sender);

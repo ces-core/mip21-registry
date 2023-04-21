@@ -27,6 +27,9 @@ simulate-deploy() {
 		done
 	} 2>/dev/null
 
+	# sender needs gas to submit txs to deploy. (this below line is needed for local fork testing)
+	#cast rpc --rpc-url $ANVIL_RPC_URL anvil_setBalance $ETH_FROM $(cast --to-wei 10 ETH)
+
 	local RESPONSE=$($FORGE_SCRIPT DeployRwaRegistry -vvv --broadcast --rpc-url $ANVIL_RPC_URL | tee >(cat 1>&2))
 	local MIP21_REGISTRY=$(jq -Rr 'fromjson? | .returns["0"].value' <<<"$RESPONSE")
 
